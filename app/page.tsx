@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { Shield, Brain, Zap } from "lucide-react";
 import type {
   RulesLayerResult,
   VelocityLayerResult,
@@ -16,19 +17,19 @@ import type {
 
 const FEATURES = [
   {
-    icon: "🛡️",
+    icon: Shield,
     title: "Deterministic Rules",
     description:
       "Amount thresholds, allowlists & denylists, and velocity limits per agent or workspace — evaluated in microseconds with zero false negatives.",
   },
   {
-    icon: "🧠",
+    icon: Brain,
     title: "Semantic Detection",
     description:
       "Claude AI reads the agent's reasoning and checks it against the actual transaction. Catches prompt injections and reasoning anomalies that rigid rules miss.",
   },
   {
-    icon: "⚡",
+    icon: Zap,
     title: "SDK Plug-and-Play",
     description:
       "One API call to secure any agentic payment flow. Works with LangChain, CrewAI, AutoGPT, and fully custom agents in minutes.",
@@ -1490,8 +1491,8 @@ export default function HomePage() {
                   />
                 )}
                 <div className="relative">
-                  <div className="w-12 h-12 bg-zinc-800 group-hover:bg-violet-500/10 transition-colors rounded-xl flex items-center justify-center text-2xl mb-6">
-                    {f.icon}
+                  <div className="w-12 h-12 bg-zinc-800 group-hover:bg-violet-500/10 transition-colors rounded-xl flex items-center justify-center mb-6">
+                    <f.icon className="w-6 h-6 text-zinc-400 group-hover:text-violet-400 transition-colors" />
                   </div>
                   <h3 className="text-xl font-semibold mb-3">{f.title}</h3>
                   <p className="text-zinc-400 text-sm leading-relaxed">{f.description}</p>

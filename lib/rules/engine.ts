@@ -29,7 +29,7 @@ export interface EngineResult {
 
 /**
  * Runs all active rules for a workspace ordered by priority.
- * First "deny" short-circuits. Highest risk score wins for "review".
+ * First block short-circuits. Highest risk score wins for flag.
  */
 export async function runRuleEngine(
   intent: PaymentIntent,

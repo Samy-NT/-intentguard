@@ -18,6 +18,11 @@ interface VelocityAmountConfig {
   scope: "agent" | "workspace" | "recipient";
 }
 
+function toFiniteAmount(value: unknown): number {
+  const amount = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 /** Count-based velocity: max N transactions per window */
 export async function evaluateVelocityCount(
   rule: DbRule,
@@ -32,7 +37,7 @@ export async function evaluateVelocityCount(
     .select("id", { count: "exact", head: true })
     .eq("workspace_id", intent.workspace_id)
     .gte("created_at", since)
-    .in("decision", ["allow", "review"]); // only count approved intents
+    .in("decision", ["allow", "flag"]);
 
   if (cfg.scope === "agent") query = query.eq("agent_id", intent.agent_id);
   if (cfg.scope === "recipient") query = query.eq("recipient", intent.recipient);
@@ -75,7 +80,7 @@ export async function evaluateVelocityAmount(
     .eq("workspace_id", intent.workspace_id)
     .eq("currency", intent.currency)
     .gte("created_at", since)
-    .in("decision", ["allow", "review"]);
+    .in("decision", ["allow", "flag"]);
 
   if (cfg.scope === "agent") query = query.eq("agent_id", intent.agent_id);
   if (cfg.scope === "recipient") query = query.eq("recipient", intent.recipient);
@@ -87,7 +92,7 @@ export async function evaluateVelocityAmount(
     return null;
   }
 
-  const cumulative = (data ?? []).reduce((sum, row) => sum + (row.amount as number), 0);
+  const cumulative = (data ?? []).reduce((sum, row) => sum + toFiniteAmount(row.amount), 0);
   const total = cumulative + intent.amount;
 
   if (total > cfg.max_amount) {

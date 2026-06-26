@@ -1,4 +1,5 @@
 import type { RuleDecision } from "@/types";
+import { validateWebhookUrl } from "@/lib/webhooks/validate";
 
 // ─── Config & payload types ───────────────────────────────────────────────────
 
@@ -24,6 +25,14 @@ export interface EscalationPayload {
   timestamp: string;
 }
 
+export type WebhookPayload = EscalationPayload | Record<string, unknown>;
+
+export interface WebhookDeliveryResult {
+  status: "blocked" | "delivered" | "failed";
+  http_status?: number;
+  error?: string;
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /** Returns true when this intent should trigger an operator notification. */
@@ -46,13 +55,18 @@ export function shouldEscalate(
  * - Never throws — all errors are logged and swallowed (fail-open)
  */
 export async function fireWebhook(
-  payload: EscalationPayload,
+  payload: WebhookPayload,
   config: WebhookConfig
-): Promise<void> {
-  console.log(`[webhook] firing → ${config.url}`, {
-    intent_id: payload.intent_id,
-    decision: payload.decision,
-    risk_score: payload.risk_score,
+): Promise<WebhookDeliveryResult> {
+  const validation = await validateWebhookUrl(config.url);
+  if (!validation.ok || !validation.normalizedUrl) {
+    console.error(`[webhook] blocked unsafe URL: ${validation.error}`);
+    return { status: "blocked", error: validation.error };
+  }
+
+  console.log("[webhook] firing", {
+    event: typeof payload.event === "string" ? payload.event : "unknown",
+    intent_id: typeof payload.intent_id === "string" ? payload.intent_id : null,
     has_secret: !!config.secret,
   });
 
@@ -71,7 +85,7 @@ export async function fireWebhook(
   const timer = setTimeout(() => abort.abort(), 5_000);
 
   try {
-    const res = await fetch(config.url, {
+    const res = await fetch(validation.normalizedUrl, {
       method: "POST",
       headers,
       body,
@@ -79,13 +93,16 @@ export async function fireWebhook(
     });
 
     if (res.ok) {
-      console.log(`[webhook] delivered — HTTP ${res.status} to ${config.url}`);
+      console.log(`[webhook] delivered — HTTP ${res.status}`);
+      return { status: "delivered", http_status: res.status };
     } else {
-      console.error(`[webhook] delivery failed — HTTP ${res.status} to ${config.url}`);
+      console.error(`[webhook] delivery failed — HTTP ${res.status}`);
+      return { status: "failed", http_status: res.status };
     }
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);
-    console.error(`[webhook] delivery error (${config.url}): ${reason}`);
+    console.error(`[webhook] delivery error: ${reason}`);
+    return { status: "failed", error: reason };
   } finally {
     clearTimeout(timer);
   }

@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
+import { apiKeyHeaders, getStoredApiKey, storeApiKey } from "./api-key";
+import { Sidebar } from "@/app/components/Sidebar";
+import { Pencil, Inbox, Search } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -15,6 +18,9 @@ interface LogEntry {
   decision: "allow" | "block" | "flag";
   risk_score: number;
   triggered_rule: string | null;
+  review_status: "not_required" | "pending" | "approved" | "rejected";
+  review_note: string | null;
+  reviewed_at: string | null;
   created_at: string;
 }
 
@@ -27,6 +33,21 @@ interface WorkspaceSettings {
   block_crypto: boolean;
   blocked_recipients: string[];
   webhook_threshold: number;
+}
+
+interface WebhookJob {
+  id: string;
+  intent_id: string | null;
+  event: string;
+  status: "pending" | "delivered" | "failed" | "blocked";
+  attempts: number;
+  max_attempts: number;
+  next_attempt_at: string;
+  last_error: string | null;
+  http_status: number | null;
+  delivered_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 type SortOption = "date_desc" | "risk_desc" | "amount_desc";
@@ -392,7 +413,7 @@ function TriggeredRuleModal({
                   onClick={() => { onAdjustRule(cfg); onClose(); }}
                   className="flex items-center gap-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-300 hover:text-white transition-colors px-3 py-2 rounded-lg"
                 >
-                  <span className="text-violet-400">✏</span>
+                  <Pencil className="w-3 h-3 text-violet-400" />
                   {cfg.label}
                 </button>
               ))}
@@ -471,6 +492,64 @@ function ActiveRulesPanel({
           All settings →
         </Link>
       </div>
+    </div>
+  );
+}
+
+function WebhookJobsPanel({
+  jobs,
+  loading,
+  onRetry,
+}: {
+  jobs: WebhookJob[];
+  loading: boolean;
+  onRetry: (id: string) => void;
+}) {
+  const statusColor = {
+    pending: "text-amber-400",
+    delivered: "text-emerald-400",
+    failed: "text-red-400",
+    blocked: "text-red-400",
+  } as const;
+
+  return (
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-zinc-800">
+        <h2 className="font-semibold text-sm text-white">Webhook Jobs</h2>
+        <p className="text-[11px] text-zinc-500 mt-0.5">Retry queue and delivery state</p>
+      </div>
+      {loading ? (
+        <div className="py-8 px-5 text-center text-zinc-600 text-xs">Loading jobs...</div>
+      ) : jobs.length === 0 ? (
+        <div className="py-8 px-5 text-center text-zinc-600 text-xs">No webhook jobs yet</div>
+      ) : (
+        <div className="divide-y divide-zinc-800/60">
+          {jobs.slice(0, 6).map((job) => (
+            <div key={job.id} className="px-5 py-3.5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-zinc-300 truncate">{job.event}</span>
+                <span className={`text-[10px] uppercase tracking-wider font-mono ${statusColor[job.status]}`}>
+                  {job.status}
+                </span>
+              </div>
+              <div className="text-[10px] text-zinc-600 font-mono">
+                {job.attempts}/{job.max_attempts} attempts
+                {job.http_status ? ` · HTTP ${job.http_status}` : ""}
+              </div>
+              {job.last_error && <div className="text-[10px] text-red-400/80 truncate">{job.last_error}</div>}
+              {(job.status === "failed" || job.status === "blocked") && (
+                <button
+                  type="button"
+                  onClick={() => onRetry(job.id)}
+                  className="text-[10px] uppercase tracking-wider text-violet-400 hover:text-violet-300 border border-violet-500/30 px-2 py-1 rounded-lg"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -673,6 +752,9 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<WorkspaceSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [webhookJobs, setWebhookJobs] = useState<WebhookJob[]>([]);
+  const [webhookJobsLoading, setWebhookJobsLoading] = useState(true);
+  const [apiKey, setApiKey] = useState("");
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const [selectedDecisions, setSelectedDecisions] = useState<Set<LogEntry["decision"]>>(
@@ -692,9 +774,16 @@ export default function DashboardPage() {
 
   // ── Data fetching ───────────────────────────────────────────────────────────
   const fetchLogs = useCallback(async (silent = false) => {
+    if (!apiKey.trim()) {
+      setError("Enter an API key to load workspace logs");
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
+
     if (!silent) setLoading(true);
     try {
-      const res = await fetch("/api/logs");
+      const res = await fetch("/api/logs", { headers: apiKeyHeaders(apiKey) });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -708,11 +797,16 @@ export default function DashboardPage() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [apiKey]);
 
   const fetchSettings = useCallback(async () => {
+    if (!apiKey.trim()) {
+      setSettingsLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/v1/workspace/settings");
+      const res = await fetch("/api/v1/workspace/settings", { headers: apiKeyHeaders(apiKey) });
       if (!res.ok) return;
       const { settings } = await res.json();
       if (settings) setSettings({ ...DEFAULT_SETTINGS, ...settings });
@@ -721,14 +815,38 @@ export default function DashboardPage() {
     } finally {
       setSettingsLoading(false);
     }
+  }, [apiKey]);
+
+  const fetchWebhookJobs = useCallback(async () => {
+    if (!apiKey.trim()) {
+      setWebhookJobsLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/v1/workspace/webhook-jobs", { headers: apiKeyHeaders(apiKey) });
+      if (!res.ok) return;
+      const { jobs } = await res.json();
+      setWebhookJobs(jobs ?? []);
+    } finally {
+      setWebhookJobsLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => {
+    setApiKey(getStoredApiKey());
   }, []);
 
   useEffect(() => {
     fetchLogs();
     fetchSettings();
-    const interval = setInterval(() => fetchLogs(true), 5000);
+    fetchWebhookJobs();
+    const interval = setInterval(() => {
+      fetchLogs(true);
+      fetchWebhookJobs();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [fetchLogs, fetchSettings]);
+  }, [fetchLogs, fetchSettings, fetchWebhookJobs]);
 
   // ── Filtering + sorting (client-side) ──────────────────────────────────────
   const filteredLogs = useMemo(() => {
@@ -770,7 +888,7 @@ export default function DashboardPage() {
     const updated = { ...settings, [key]: value } as WorkspaceSettings;
     const res = await fetch("/api/v1/workspace/settings", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...apiKeyHeaders(apiKey) },
       body: JSON.stringify(updated),
     });
     if (res.ok) {
@@ -780,6 +898,41 @@ export default function DashboardPage() {
       setSaveToast("Rule updated");
       toastTimer.current = setTimeout(() => setSaveToast(null), 2500);
     }
+  }
+
+  async function reviewLog(id: string, review_status: "approved" | "rejected") {
+    const note = review_status === "approved" ? "Approved from dashboard" : "Rejected from dashboard";
+    const res = await fetch("/api/logs/review", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...apiKeyHeaders(apiKey) },
+      body: JSON.stringify({ id, review_status, review_note: note }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error ?? `HTTP ${res.status}`);
+      return;
+    }
+    setLogs((prev) =>
+      prev.map((log) =>
+        log.id === id
+          ? {
+              ...log,
+              review_status: data.log.review_status,
+              review_note: data.log.review_note,
+              reviewed_at: data.log.reviewed_at,
+            }
+          : log
+      )
+    );
+  }
+
+  async function retryWebhookJob(id: string) {
+    const res = await fetch("/api/v1/workspace/webhook-jobs", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...apiKeyHeaders(apiKey) },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) await fetchWebhookJobs();
   }
 
   const toggleDecision = (d: LogEntry["decision"]) => {
@@ -792,43 +945,56 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#09090e" }}>
-      {/* ── Header ─────────────────────────────────── */}
-      <header className="border-b border-zinc-800/60 bg-[#09090e]/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold">IG</div>
-              <span className="font-bold text-lg tracking-tight group-hover:text-zinc-300 transition-colors">IntentGuard</span>
-            </Link>
-            <div className="hidden sm:block w-px h-5 bg-zinc-700" />
-            <nav className="hidden sm:flex items-center gap-1">
-              <Link href="/dashboard" className="text-sm text-white bg-zinc-800 px-3 py-1.5 rounded-lg">Logs</Link>
-              <Link href="/dashboard/settings" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800">Settings</Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Live · 5s
+    <div className="flex min-h-screen bg-[#09090e]">
+      <Sidebar />
+      
+      <main className="flex-1 ml-64">
+        {/* ── Header ─────────────────────────────────── */}
+        <header className="border-b border-zinc-800/60 bg-[#09090e]/80 backdrop-blur-sm sticky top-0 z-40">
+          <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-2 group">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold">IG</div>
+                <span className="font-bold text-lg tracking-tight group-hover:text-zinc-300 transition-colors">IntentGuard</span>
+              </Link>
+              <div className="hidden sm:block w-px h-5 bg-zinc-700" />
+              <nav className="hidden sm:flex items-center gap-1">
+                <Link href="/dashboard" className="text-sm text-white bg-zinc-800 px-3 py-1.5 rounded-lg">Logs</Link>
+                <Link href="/dashboard/settings" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800">Settings</Link>
+              </nav>
             </div>
-            {lastRefresh && (
-              <span className="hidden sm:block text-xs text-zinc-600">
-                {formatTime(lastRefresh.toISOString())}
-              </span>
-            )}
-            <button
-              onClick={() => fetchLogs()}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  storeApiKey(e.target.value);
+                }}
+                placeholder="API key"
+                className="w-44 bg-zinc-900 border border-zinc-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+              />
+              <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live · 5s
+              </div>
+              {lastRefresh && (
+                <span className="hidden sm:block text-xs text-zinc-600">
+                  {formatTime(lastRefresh.toISOString())}
+                </span>
+              )}
+              <button
+                onClick={() => fetchLogs()}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="max-w-screen-xl mx-auto px-6 py-8">
-        {/* ── Stats ────────────────────────────────── */}
+        <div className="max-w-screen-xl mx-auto px-6 py-8">
+          {/* ── Stats ────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total Checks", value: total, color: "text-white" },
@@ -904,7 +1070,7 @@ export default function DashboardPage() {
                 <div className="flex flex-col items-center justify-center py-16 text-zinc-600 text-sm gap-2">
                   {total === 0 ? (
                     <>
-                      <span className="text-3xl">📭</span>
+                      <Inbox className="w-8 h-8 text-zinc-500 mb-1" />
                       <p>No verifications yet.</p>
                       <p className="text-xs text-zinc-700">
                         Send a request to{" "}
@@ -914,7 +1080,7 @@ export default function DashboardPage() {
                     </>
                   ) : (
                     <>
-                      <span className="text-2xl">🔍</span>
+                      <Search className="w-6 h-6 text-zinc-500 mb-1" />
                       <p>No results match your filters.</p>
                       <button
                         type="button"
@@ -973,7 +1139,18 @@ export default function DashboardPage() {
                             <span className="text-zinc-400 text-xs truncate max-w-[140px] block">{log.recipient}</span>
                           </td>
                           <td className="px-5 py-4 text-center">
-                            <DecisionBadge decision={log.decision} />
+                            <div className="flex flex-col items-center gap-1">
+                              <DecisionBadge decision={log.decision} />
+                              {log.review_status === "pending" && (
+                                <span className="text-[10px] text-amber-400 uppercase tracking-wider">review</span>
+                              )}
+                              {log.review_status === "approved" && (
+                                <span className="text-[10px] text-emerald-400 uppercase tracking-wider">approved</span>
+                              )}
+                              {log.review_status === "rejected" && (
+                                <span className="text-[10px] text-red-400 uppercase tracking-wider">rejected</span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-5 py-4 hidden md:table-cell">
                             <RiskBar score={log.risk_score} />
@@ -987,6 +1164,24 @@ export default function DashboardPage() {
                               >
                                 View rule
                               </button>
+                            )}
+                            {log.review_status === "pending" && (
+                              <div className="mt-2 flex justify-end gap-1 opacity-0 group-hover:opacity-100">
+                                <button
+                                  type="button"
+                                  onClick={() => reviewLog(log.id, "approved")}
+                                  className="text-[10px] uppercase tracking-wider text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded-lg"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => reviewLog(log.id, "rejected")}
+                                  className="text-[10px] uppercase tracking-wider text-red-400 border border-red-500/30 px-2 py-1 rounded-lg"
+                                >
+                                  Reject
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -1003,13 +1198,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="xl:w-72 flex-shrink-0">
+          <div className="xl:w-72 flex-shrink-0 space-y-4">
             <ActiveRulesPanel
               settings={settings}
               loading={settingsLoading}
               onEdit={setEditRuleCfg}
             />
+            <WebhookJobsPanel
+              jobs={webhookJobs}
+              loading={webhookJobsLoading}
+              onRetry={retryWebhookJob}
+            />
           </div>
+        </div>
         </div>
       </main>
 

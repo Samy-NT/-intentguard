@@ -12,6 +12,7 @@ export interface SemanticAnalysis {
   alignment_reasoning: string;
   attack_vectors: AttackVector[];
   mission_alignment: "coherent" | "drift_detected" | "not_provided";
+  unavailable?: boolean;
 }
 
 const ANALYSIS_TOOL: Anthropic.Tool = {
@@ -205,14 +206,18 @@ ${intent.agent_context}`;
 }
 
 function failOpen(reason: string, preScreen?: ReturnType<typeof preScreenContext>): SemanticAnalysis {
+  const vectors = preScreen?.vectors ?? [];
+  const riskScore = preScreen?.score_contribution ?? 0;
+
   return {
     injection_detected: false,
-    anomaly_detected: false,
+    anomaly_detected: vectors.length > 0 || riskScore >= 30,
     explanation: reason,
-    risk_score: preScreen?.score_contribution ?? 0,
+    risk_score: riskScore,
     mission_scope_alignment: "not_provided",
     alignment_reasoning: "Analysis unavailable.",
-    attack_vectors: preScreen?.vectors ?? [],
+    attack_vectors: vectors,
     mission_alignment: preScreen?.mission_alignment ?? "not_provided",
+    unavailable: true,
   };
 }

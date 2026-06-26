@@ -3,6 +3,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { apiKeyHeaders, getStoredApiKey, storeApiKey } from "../api-key";
+import { Sidebar } from "@/app/components/Sidebar";
+import {
+  Key,
+  Settings,
+  Users,
+  Tag,
+  Bot,
+  Zap,
+  Bell,
+  ClipboardList,
+} from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -16,6 +28,7 @@ type Category =
   | "crypto"
   | "other";
 type Sensitivity = "low" | "medium" | "high";
+type SemanticFailMode = "allow" | "flag" | "block";
 
 interface Vendor {
   name: string;
@@ -30,11 +43,20 @@ interface AgentRule {
   active: boolean;
 }
 
+interface ApiKeyRecord {
+  id: string;
+  name: string;
+  role: "admin" | "operator" | "viewer";
+  is_active: boolean;
+  created_at: string;
+}
+
 interface PolicySettings {
   block_crypto: boolean;
   max_amount_usd: number;
   max_amount_daily_usd: number;
   semantic_sensitivity: Sensitivity;
+  semantic_fail_mode: SemanticFailMode;
   block_weekends: boolean;
   allowed_hours: { start: number; end: number; timezone: string };
   allowed_recipients: string[];
@@ -51,6 +73,8 @@ interface PolicySettings {
   webhook_url: string;
   webhook_secret: string;
   webhook_threshold: number;
+  siem_url: string;
+  siem_secret: string;
   escalate_on_block: boolean;
   escalate_on_flag: boolean;
   escalate_on_risk_score: boolean;
@@ -67,6 +91,7 @@ const DEFAULT: PolicySettings = {
   max_amount_usd: 10000,
   max_amount_daily_usd: 50000,
   semantic_sensitivity: "medium",
+  semantic_fail_mode: "flag",
   block_weekends: false,
   allowed_hours: { start: 0, end: 23, timezone: "UTC" },
   allowed_recipients: [],
@@ -83,6 +108,8 @@ const DEFAULT: PolicySettings = {
   webhook_url: "",
   webhook_secret: "",
   webhook_threshold: 70,
+  siem_url: "",
+  siem_secret: "",
   escalate_on_block: true,
   escalate_on_flag: true,
   escalate_on_risk_score: true,
@@ -123,12 +150,12 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 // ── Primitive components ──────────────────────────────────────────────────────
 
 function SectionCard({
-  icon,
+  icon: Icon,
   title,
   description,
   children,
 }: {
-  icon: string;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   description?: string;
   children: ReactNode;
@@ -137,7 +164,7 @@ function SectionCard({
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden">
       <div className="px-6 py-4 border-b border-zinc-800 bg-zinc-900/80">
         <div className="flex items-center gap-3">
-          <span className="text-xl leading-none">{icon}</span>
+          <Icon className="w-5 h-5 text-zinc-400" />
           <div>
             <h2 className="font-semibold text-white text-sm">{title}</h2>
             {description && <p className="text-xs text-zinc-500 mt-0.5">{description}</p>}
@@ -368,6 +395,11 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [showSecret, setShowSecret] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [newApiKeyName, setNewApiKeyName] = useState("Production key");
+  const [newApiKeyRole, setNewApiKeyRole] = useState<ApiKeyRecord["role"]>("operator");
+  const [createdApiKey, setCreatedApiKey] = useState<string | null>(null);
   const toastRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const set = useCallback(
@@ -377,19 +409,76 @@ export default function SettingsPage() {
   );
 
   useEffect(() => {
-    fetch("/api/workspace/settings")
+    const storedApiKey = getStoredApiKey();
+    setApiKey(storedApiKey);
+    if (!storedApiKey) {
+      setLoading(false);
+      showToast("error", "Enter an API key to load workspace settings");
+      return;
+    }
+
+    fetch("/api/workspace/settings", { headers: apiKeyHeaders(storedApiKey) })
       .then((r) => r.json())
       .then(({ settings }) => {
         if (settings) setS((prev) => ({ ...prev, ...settings }));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+    fetchApiKeys(storedApiKey);
+    // Initial load should use the key captured from session storage once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function showToast(type: "success" | "error", message: string) {
     clearTimeout(toastRef.current);
     setToast({ type, message });
     toastRef.current = setTimeout(() => setToast(null), 4000);
+  }
+
+  async function fetchApiKeys(key = apiKey) {
+    if (!key.trim()) return;
+    try {
+      const res = await fetch("/api/workspace/api-keys", { headers: apiKeyHeaders(key) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load API keys");
+      setApiKeys(data.api_keys ?? []);
+    } catch (e) {
+      showToast("error", e instanceof Error ? e.message : "Failed to load API keys");
+    }
+  }
+
+  async function createApiKey() {
+    try {
+      const res = await fetch("/api/workspace/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...apiKeyHeaders(apiKey) },
+        body: JSON.stringify({ name: newApiKeyName, role: newApiKeyRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create API key");
+      setCreatedApiKey(data.raw_key);
+      await fetchApiKeys();
+      showToast("success", "API key created. Copy it now; it will not be shown again.");
+    } catch (e) {
+      showToast("error", e instanceof Error ? e.message : "Failed to create API key");
+    }
+  }
+
+  async function revokeApiKey(id: string) {
+    if (!confirm("Revoke this API key? Existing integrations using it will stop working.")) return;
+    try {
+      const res = await fetch("/api/workspace/api-keys", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...apiKeyHeaders(apiKey) },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to revoke API key");
+      await fetchApiKeys();
+      showToast("success", "API key revoked");
+    } catch (e) {
+      showToast("error", e instanceof Error ? e.message : "Failed to revoke API key");
+    }
   }
 
   function validate(): boolean {
@@ -400,6 +489,8 @@ export default function SettingsPage() {
       errs.push("Allowed hours: start must be before end");
     if (s.webhook_url && !/^https?:\/\/.+/.test(s.webhook_url))
       errs.push("Webhook URL must be a valid HTTP/HTTPS URL");
+    if (s.siem_url && !/^https?:\/\/.+/.test(s.siem_url))
+      errs.push("SIEM URL must be a valid HTTP/HTTPS URL");
     if (s.velocity_max_per_hour <= 0) errs.push("Velocity max per hour must be > 0");
     if (s.velocity_max_per_day <= 0) errs.push("Velocity max per day must be > 0");
     if (s.dedup_window_seconds < 0) errs.push("Dedup window must be ≥ 0");
@@ -420,7 +511,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/workspace/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...apiKeyHeaders(apiKey) },
         body: JSON.stringify(s),
       });
       const data = await res.json();
@@ -481,44 +572,58 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen text-white">
-      {/* ── Header ─────────────────────────────────────── */}
-      <header className="border-b border-zinc-800/60 bg-[#09090e]/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold">
-                IG
-              </div>
-              <span className="font-bold text-lg tracking-tight group-hover:text-zinc-300 transition-colors">
-                IntentGuard
-              </span>
-            </Link>
-            <div className="w-px h-5 bg-zinc-700" />
-            <nav className="flex items-center gap-1">
-              <Link
-                href="/dashboard"
-                className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800"
-              >
-                Logs
+    <div className="flex min-h-screen bg-[#09090e]">
+      <Sidebar />
+      
+      <main className="flex-1 ml-64">
+        {/* ── Header ─────────────────────────────────────── */}
+        <header className="border-b border-zinc-800/60 bg-[#09090e]/80 backdrop-blur-sm sticky top-0 z-40">
+          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-2 group">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold">
+                  IG
+                </div>
+                <span className="font-bold text-lg tracking-tight group-hover:text-zinc-300 transition-colors">
+                  IntentGuard
+                </span>
               </Link>
-              <Link
-                href="/dashboard/settings"
-                className="text-sm text-white bg-zinc-800 px-3 py-1.5 rounded-lg"
+              <div className="w-px h-5 bg-zinc-700" />
+              <nav className="flex items-center gap-1">
+                <Link
+                  href="/dashboard"
+                  className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800"
+                >
+                  Logs
+                </Link>
+                <Link
+                  href="/dashboard/settings"
+                  className="text-sm text-white bg-zinc-800 px-3 py-1.5 rounded-lg"
+                >
+                  Settings
+                </Link>
+              </nav>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  storeApiKey(e.target.value);
+                }}
+                onBlur={() => fetchApiKeys()}
+                placeholder="API key"
+                className="w-44 bg-zinc-900 border border-zinc-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+              />
+              <button
+                type="button"
+                onClick={resetDefaults}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800"
               >
-                Settings
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={resetDefaults}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800"
-            >
-              Reset to defaults
-            </button>
-            <button
+                Reset to defaults
+              </button>
+              <button
               type="button"
               onClick={save}
               disabled={saving}
@@ -533,7 +638,7 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-5">
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-5">
         {/* ── Toast ──────────────────────────────────────── */}
         {toast && (
           <div
@@ -569,9 +674,81 @@ export default function SettingsPage() {
           </div>
         )}
 
+        <SectionCard
+          icon={Key}
+          title="API Keys"
+          description="Workspace-scoped keys for production integrations"
+        >
+          <FullRow label="Create key" description="The raw key is displayed once after creation">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                value={newApiKeyName}
+                onChange={(e) => setNewApiKeyName(e.target.value)}
+                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+              />
+              <SelectInput
+                value={newApiKeyRole}
+                onChange={(v) => setNewApiKeyRole(v)}
+                options={[
+                  { value: "operator", label: "Operator" },
+                  { value: "viewer", label: "Viewer" },
+                  { value: "admin", label: "Admin" },
+                ]}
+                className="w-32"
+              />
+              <button
+                type="button"
+                onClick={createApiKey}
+                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-200 text-sm px-4 py-2 rounded-lg transition-colors"
+              >
+                Create
+              </button>
+            </div>
+            {createdApiKey && (
+              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <p className="text-xs text-amber-300 mb-2">
+                  Copy this key now. It will not be shown again.
+                </p>
+                <code className="block text-xs text-zinc-100 break-all">{createdApiKey}</code>
+              </div>
+            )}
+          </FullRow>
+
+          <FullRow label="Existing keys">
+            <div className="space-y-2">
+              {apiKeys.length === 0 && (
+                <p className="text-sm text-zinc-500">No keys loaded for this workspace.</p>
+              )}
+              {apiKeys.map((key) => (
+                <div
+                  key={key.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-zinc-200 truncate">{key.name}</p>
+                    <p className="text-xs text-zinc-600">
+                      {key.role} · {key.is_active ? "Active" : "Revoked"} ·{" "}
+                      {new Date(key.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {key.is_active && (
+                    <button
+                      type="button"
+                      onClick={() => revokeApiKey(key.id)}
+                      className="text-xs text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg px-3 py-1.5"
+                    >
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </FullRow>
+        </SectionCard>
+
         {/* ── Section 1 — General Policies ─────────────── */}
         <SectionCard
-          icon="⚙️"
+          icon={Settings}
           title="General Policies"
           description="Global transaction limits and baseline security settings"
         >
@@ -649,6 +826,22 @@ export default function SettingsPage() {
             </div>
           </FullRow>
 
+          <SettingRow
+            label="Semantic failure mode"
+            description="Decision returned when Claude analysis is unavailable"
+          >
+            <SelectInput
+              value={s.semantic_fail_mode}
+              onChange={(v) => set("semantic_fail_mode", v)}
+              options={[
+                { value: "flag", label: "Flag for review" },
+                { value: "block", label: "Block" },
+                { value: "allow", label: "Allow" },
+              ]}
+              className="w-40"
+            />
+          </SettingRow>
+
           <FullRow
             label="Allowed transaction hours"
             description="Transactions outside this window will be blocked"
@@ -699,7 +892,7 @@ export default function SettingsPage() {
 
         {/* ── Section 2 — Recipients & Vendors ─────────── */}
         <SectionCard
-          icon="👥"
+          icon={Users}
           title="Recipients & Vendors"
           description="Control who your agents can send money to"
         >
@@ -802,7 +995,7 @@ export default function SettingsPage() {
 
         {/* ── Section 3 — Spending Categories ──────────── */}
         <SectionCard
-          icon="🏷️"
+          icon={Tag}
           title="Spending Categories"
           description="Control which spending categories are allowed"
         >
@@ -855,7 +1048,7 @@ export default function SettingsPage() {
 
         {/* ── Section 4 — Per-agent Rules ───────────────── */}
         <SectionCard
-          icon="🤖"
+          icon={Bot}
           title="Per-agent Rules"
           description="Override global rules for specific agent IDs"
         >
@@ -958,7 +1151,7 @@ export default function SettingsPage() {
 
         {/* ── Section 5 — Velocity & Frequency ─────────── */}
         <SectionCard
-          icon="⚡"
+          icon={Zap}
           title="Velocity & Frequency"
           description="Rate limits applied per agent to detect unusual activity"
         >
@@ -1015,7 +1208,7 @@ export default function SettingsPage() {
 
         {/* ── Section 6 — Escalation & Webhook ─────────── */}
         <SectionCard
-          icon="🔔"
+          icon={Bell}
           title="Escalation & Webhook"
           description="Human-in-the-loop notifications for risky transactions"
         >
@@ -1039,6 +1232,38 @@ export default function SettingsPage() {
                 value={s.webhook_secret}
                 onChange={(e) => set("webhook_secret", e.target.value)}
                 placeholder="whsec_…"
+                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 font-mono transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSecret(!showSecret)}
+                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-400 text-xs px-3 py-2 rounded-lg transition-colors"
+              >
+                {showSecret ? "Hide" : "Show"}
+              </button>
+            </div>
+          </FullRow>
+
+          <FullRow label="SIEM export URL" description="Optional HTTPS endpoint for nightly audit summaries">
+            <TextInput
+              value={s.siem_url}
+              onChange={(v) => set("siem_url", v)}
+              placeholder="https://siem.example.com/ingest/intentguard"
+              type="url"
+              className="w-full"
+            />
+          </FullRow>
+
+          <FullRow
+            label="SIEM secret"
+            description="Used to sign SIEM export payloads with HMAC-SHA256"
+          >
+            <div className="flex gap-2">
+              <input
+                type={showSecret ? "text" : "password"}
+                value={s.siem_secret}
+                onChange={(e) => set("siem_secret", e.target.value)}
+                placeholder="siemsec_..."
                 className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 font-mono transition-colors"
               />
               <button
@@ -1139,7 +1364,7 @@ export default function SettingsPage() {
 
         {/* ── Section 7 — Audit & Compliance ───────────── */}
         <SectionCard
-          icon="📋"
+          icon={ClipboardList}
           title="Audit & Compliance"
           description="Log retention and data export settings"
         >
@@ -1209,6 +1434,7 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+      </div>
       </main>
     </div>
   );

@@ -23,7 +23,7 @@ insert into api_keys (workspace_id, name, key_hash) values
 
 -- 3. Rules
 
--- Amount threshold: deny > $10 000, review > $1 000
+-- Amount threshold: deny > $10 000, flag > $1 000
 insert into rules (workspace_id, rule_type, priority, config) values
   (
     '00000000-0000-0000-0000-000000000001',
