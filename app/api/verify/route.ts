@@ -1,19 +1,21 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { createServerClient } from "@/lib/supabase/server";
-import { validateApiKey } from "@/lib/auth";
+import { authenticateRequest } from "@/lib/auth";
 import { runRuleEngine } from "@/lib/rules/engine";
 import { analyzeIntent } from "@/lib/claude/analyze";
 import { evaluatePolicy } from "@/lib/policies/evaluate";
 import { getWorkspaceConfig } from "@/lib/workspaces";
-import { fireWebhook, shouldEscalate } from "@/lib/webhooks/notify";
+import { shouldEscalate } from "@/lib/webhooks/notify";
+import { enqueueWebhookJob } from "@/lib/webhooks/queue";
 import { err, json } from "@/lib/respond";
 import { withTimeout } from "@/lib/timeout";
 import { assertEnv } from "@/lib/env";
 import { recordLayerMetric, captureError } from "@/lib/monitoring";
+import { checkWorkspaceRateLimit } from "@/lib/ratelimit";
 import type { RuleDecision, VerifyResponse } from "@/types";
 
 assertEnv();
+const MAX_VERIFY_BODY_BYTES = 32_000;
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
@@ -32,23 +34,23 @@ const PaymentIntentSchema = z.object({
 
 export async function POST(req: NextRequest) {
   // 1. Authenticate
-  const rawKey = req.headers.get("x-api-key");
-  if (!rawKey) return err("Missing x-api-key header", 401);
+  const auth = await authenticateRequest(req);
+  if (auth instanceof Response) return auth;
+  const { db, workspace_id } = auth;
 
-  const db = createServerClient();
-  let auth;
-  try {
-    auth = await withTimeout(validateApiKey(rawKey, db), 5_000, "auth-lookup");
-  } catch (e) {
-    console.error("[verify] Auth timeout:", e);
-    return err("Authentication service unavailable", 503);
+  const rateLimit = await checkWorkspaceRateLimit(workspace_id);
+  if (!rateLimit.allowed) {
+    return err("Workspace verification rate limit exceeded", 429);
   }
-  if (!auth.valid) return err(auth.error ?? "Unauthorized", 401);
 
   // 2. Parse & validate body
   let body: unknown;
   try {
-    body = await req.json();
+    const raw = await req.text();
+    if (new TextEncoder().encode(raw).length > MAX_VERIFY_BODY_BYTES) {
+      return err("Request body too large", 413);
+    }
+    body = JSON.parse(raw);
   } catch {
     return err("Invalid JSON body", 400);
   }
@@ -58,12 +60,13 @@ export async function POST(req: NextRequest) {
     return err(parsed.error.issues.map((i: z.ZodIssue) => i.message).join(", "), 422);
   }
 
-  const intent = { ...parsed.data, workspace_id: auth.workspace_id! };
+  const intent = { ...parsed.data, workspace_id };
 
   // 3. Idempotency — return cached decision for known intent_id
   const { data: existing } = await db
     .from("verify_logs")
     .select("decision, risk_score, triggered_rule")
+    .eq("workspace_id", intent.workspace_id)
     .eq("intent_id", intent.intent_id)
     .maybeSingle();
 
@@ -138,6 +141,10 @@ export async function POST(req: NextRequest) {
       finalDecision = "block";
       finalReason = `Prompt injection detected: ${semantic.explanation}`;
       finalRiskScore = Math.max(finalRiskScore, semantic.risk_score);
+    } else if (semantic.unavailable && wsConfig.semantic_fail_mode !== "allow") {
+      finalDecision = wsConfig.semantic_fail_mode;
+      finalReason = `Semantic analysis unavailable: ${semantic.explanation}`;
+      finalRiskScore = Math.max(finalRiskScore, wsConfig.semantic_fail_mode === "block" ? 100 : 70);
     } else if (semantic.anomaly_detected) {
       finalDecision = "flag";
       finalReason = `Semantic anomaly detected: ${semantic.explanation}`;
@@ -147,17 +154,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 7. Webhook escalation (fire-and-forget — never delays the response)
+  // 7. Webhook escalation — durable queue processed by /api/cron/webhooks
   console.log("[verify] pre-webhook —", {
     decision: finalDecision,
     risk_score: finalRiskScore,
     webhook_configured: !!wsConfig.webhook,
-    webhook_url: wsConfig.webhook?.url ?? null,
     webhook_threshold: wsConfig.webhook?.threshold ?? null,
   });
   if (wsConfig.webhook && shouldEscalate(finalDecision, finalRiskScore, wsConfig.webhook)) {
-    fireWebhook(
-      {
+    const queued = await enqueueWebhookJob(db, {
+      workspace_id: intent.workspace_id,
+      intent_id: intent.intent_id,
+      event: "payment.escalation",
+      config: wsConfig.webhook,
+      payload: {
         event: "payment.escalation",
         intent_id: intent.intent_id,
         transaction: {
@@ -172,28 +182,42 @@ export async function POST(req: NextRequest) {
         risk_score: finalRiskScore,
         timestamp: new Date().toISOString(),
       },
-      wsConfig.webhook
-    ).catch((e) => console.error("[webhook] Unhandled error:", e));
+    });
+    if (queued.error) console.error("[webhook] Failed to queue delivery:", queued.error);
   }
 
-  // 8. Persist audit log (fire and forget)
-  db.from("verify_logs")
-    .insert({
-      intent_id: intent.intent_id,
-      workspace_id: intent.workspace_id,
-      agent_id: intent.agent_id,
-      recipient: intent.recipient,
-      merchant_id: intent.merchant_id ?? null,
-      amount: intent.amount,
-      currency: intent.currency,
-      agent_context: intent.agent_context ?? null,
-      decision: finalDecision,
-      triggered_rule: engineResult.triggered_rule,
-      risk_score: finalRiskScore,
-    })
-    .then(({ error }: { error: { message: string } | null }) => {
-      if (error) console.error("[verify] Failed to write audit log:", error.message);
-    });
+  // 8. Persist audit log before returning so idempotency and velocity remain reliable.
+  try {
+    const { error } = await withTimeout(
+      Promise.resolve(
+        db.from("verify_logs").insert({
+          intent_id: intent.intent_id,
+          workspace_id: intent.workspace_id,
+          agent_id: intent.agent_id,
+          recipient: intent.recipient,
+          merchant_id: intent.merchant_id ?? null,
+          amount: intent.amount,
+          currency: intent.currency,
+          agent_context: intent.agent_context ?? null,
+          decision: finalDecision,
+          triggered_rule: engineResult.triggered_rule,
+          risk_score: finalRiskScore,
+          review_status: finalDecision === "flag" ? "pending" : "not_required",
+        })
+      ) as Promise<{ error: { message: string } | null }>,
+      5_000,
+      "audit-log-insert"
+    );
+    if (error) {
+      captureError(error, { layer: "audit-log", workspace_id: intent.workspace_id });
+      console.error("[verify] Failed to write audit log:", error.message);
+      return err("Failed to persist audit log", 500);
+    }
+  } catch (e) {
+    captureError(e, { layer: "audit-log", workspace_id: intent.workspace_id });
+    console.error("[verify] Audit log write timeout:", e);
+    return err("Audit log service unavailable", 503);
+  }
 
   // 9. Return verdict
   const response: VerifyResponse = {

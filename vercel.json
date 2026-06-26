@@ -3,5 +3,19 @@
     "app/api/**": {
       "maxDuration": 10
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/webhooks",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/nightly-export",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/retention",
+      "schedule": "30 0 * * *"
+    }
+  ]
 }

@@ -26,6 +26,7 @@ function memoryRateLimit(key: string, limit: number, windowMs: number): boolean 
 // ── Upstash Redis limiter ─────────────────────────────────────────────────────
 
 let redisLimiter: Ratelimit | null = null;
+const limiterCache = new Map<string, Ratelimit>();
 
 function getRedisLimiter(): Ratelimit | null {
   if (redisLimiter) return redisLimiter;
@@ -46,6 +47,31 @@ function getRedisLimiter(): Ratelimit | null {
     return redisLimiter;
   } catch (e) {
     console.warn("[ratelimit] Failed to create Redis limiter, using memory fallback:", e);
+    return null;
+  }
+}
+
+function getNamedRedisLimiter(prefix: string, limit: number, window: `${number} ${"s" | "m" | "h" | "d"}`): Ratelimit | null {
+  const cacheKey = `${prefix}:${limit}:${window}`;
+  const cached = limiterCache.get(cacheKey);
+  if (cached) return cached;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  try {
+    const redis = new Redis({ url, token });
+    const limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(limit, window),
+      analytics: false,
+      prefix,
+    });
+    limiterCache.set(cacheKey, limiter);
+    return limiter;
+  } catch (e) {
+    console.warn(`[ratelimit] Failed to create ${prefix} limiter, using memory fallback:`, e);
     return null;
   }
 }
@@ -84,6 +110,35 @@ export async function checkDemoRateLimit(identifier: string): Promise<RateLimitR
   return {
     allowed,
     remaining: allowed ? LIMIT - entry.count : 0,
+    resetAt: entry.resetAt,
+  };
+}
+
+export async function checkWorkspaceRateLimit(
+  workspaceId: string,
+  limit = 600,
+  windowMs = 60_000
+): Promise<RateLimitResult> {
+  const limiter = getNamedRedisLimiter("ig:verify:rl", limit, "60 s");
+
+  if (limiter) {
+    try {
+      const result = await limiter.limit(workspaceId);
+      return {
+        allowed: result.success,
+        remaining: result.remaining,
+        resetAt: result.reset,
+      };
+    } catch (e) {
+      console.warn("[ratelimit] Redis error, falling back to memory:", e);
+    }
+  }
+
+  const allowed = memoryRateLimit(`verify:${workspaceId}`, limit, windowMs);
+  const entry = memoryStore.get(`verify:${workspaceId}`)!;
+  return {
+    allowed,
+    remaining: allowed ? limit - entry.count : 0,
     resetAt: entry.resetAt,
   };
 }
