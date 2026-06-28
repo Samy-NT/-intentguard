@@ -33,13 +33,6 @@ export async function getWorkspaceConfig(
     return { policy: null, webhook: null };
   }
 
-  console.log("[workspace] raw row:", {
-    workspace_id: workspaceId,
-    has_policy: !!data.policy,
-    webhook_url: data.webhook_url ?? null,
-    webhook_threshold: data.webhook_threshold ?? null,
-  });
-
   const policy =
     data.policy && typeof data.policy === "object"
       ? (data.policy as WorkspacePolicy)
@@ -54,12 +47,6 @@ export async function getWorkspaceConfig(
             typeof data.webhook_threshold === "number" ? data.webhook_threshold : 70,
         }
       : null;
-
-  console.log("[workspace] config resolved:", {
-    has_policy: !!policy,
-    webhook_url: webhook?.url ?? null,
-    webhook_threshold: webhook?.threshold ?? null,
-  });
 
   return { policy, webhook };
 }

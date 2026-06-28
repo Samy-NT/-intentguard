@@ -49,12 +49,11 @@ export async function fireWebhook(
   payload: EscalationPayload,
   config: WebhookConfig
 ): Promise<void> {
-  console.log(`[webhook] firing → ${config.url}`, {
-    intent_id: payload.intent_id,
-    decision: payload.decision,
-    risk_score: payload.risk_score,
-    has_secret: !!config.secret,
-  });
+  // Reject non-HTTPS URLs to prevent SSRF against internal metadata endpoints
+  if (!config.url.startsWith("https://")) {
+    console.error(`[webhook] rejected non-HTTPS URL — SSRF protection`);
+    return;
+  }
 
   const body = JSON.stringify(payload);
 
