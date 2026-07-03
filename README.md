@@ -1,4 +1,4 @@
-# IntentGuard
+# Aurel
 
 Runtime intent firewall for agentic payments. Sits between your agent and the payment rail — blocking injected instructions, semantic anomalies, and policy violations before a single transaction executes.
 

@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata = {
-  title: "IntentGuard — The Intent Firewall for Agentic Payments",
+  title: "Aurel — The Intent Firewall for Agentic Payments",
   description:
-    "Block malicious payments before execution. IntentGuard sits between your AI agent and the payment rail.",
+    "Block malicious payments before execution. Aurel sits between your AI agent and the payment rail.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
