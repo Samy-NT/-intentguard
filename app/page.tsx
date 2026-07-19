@@ -810,7 +810,7 @@ function GhostedDecision({ computing }: { computing: boolean }) {
                 ["decision_hash", "sha256:4afd33e6bff5e1f92e2454fd1990e5a1"],
                 ["payload_hash", "sha256:426f70d10b4b12c19f5e711c4075c372"],
                 ["policy_version", "v1-a3f8c1d2"],
-                ["signed_by", "intentguard-api-v1.0.0"],
+                ["signed_by", "aurel-api-v1.0.0"],
                 ["execution_node", "eu-west-3-node-07"],
                 ["immutable", "true"],
               ].map(([k, v]) => (
@@ -1055,10 +1055,8 @@ export default function HomePage() {
       <nav className="border-b border-zinc-800/60 backdrop-blur-sm sticky top-0 z-50" style={{ background: "rgba(9,9,14,0.85)" }}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold">
-              IG
-            </div>
-            <span className="font-bold text-lg tracking-tight">IntentGuard</span>
+            <img src="/logo.png" alt="Aurel" className="w-7 h-7 rounded-lg" />
+            <span className="font-bold text-lg tracking-tight">Aurel</span>
           </div>
           <div className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -1105,7 +1103,7 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
-            AI agents will move money autonomously. IntentGuard sits between your agent and the
+            AI agents will move money autonomously. Aurel sits between your agent and the
             payment rail — blocking injected instructions, semantic anomalies, and policy violations{" "}
             <span className="text-zinc-200 font-medium">before a single transaction executes</span>.
           </p>
@@ -1156,7 +1154,7 @@ export default function HomePage() {
               </div>
               <h2 className="text-3xl md:text-4xl font-bold mb-3">Verification Console</h2>
               <p className="text-zinc-400 max-w-lg">
-                Submit a transaction and watch IntentGuard evaluate it across three defense layers in real time. Select a scenario or write your own.
+                Submit a transaction and watch Aurel evaluate it across three defense layers in real time. Select a scenario or write your own.
               </p>
             </div>
             <div className="hidden lg:flex items-center gap-2 flex-shrink-0 text-[10px] font-mono text-zinc-600">
@@ -1517,7 +1515,7 @@ export default function HomePage() {
                 <span className="text-zinc-400">Full protection.</span>
               </h2>
               <p className="text-zinc-400 leading-relaxed mb-8">
-                Send the transaction details and your agent&apos;s reasoning. IntentGuard evaluates
+                Send the transaction details and your agent&apos;s reasoning. Aurel evaluates
                 deterministic rules first, then runs a semantic analysis with Claude AI, and returns a
                 clear verdict in milliseconds.
               </p>
@@ -1630,10 +1628,10 @@ export default function HomePage() {
             We respond within one business day.
           </p>
           <a
-            href="mailto:contact@intentguard.io?subject=API Access Request"
+            href="mailto:contact@aurel.io?subject=API Access Request"
             className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 transition-colors text-white px-10 py-4 rounded-xl font-semibold text-lg"
           >
-            contact@intentguard.io
+            contact@aurel.io
             <span aria-hidden>→</span>
           </a>
           <p className="text-xs text-zinc-600 mt-8 font-mono">
@@ -1646,10 +1644,8 @@ export default function HomePage() {
       <footer className="border-t border-zinc-800/60 px-6 py-8">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-600">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-[9px] font-bold text-white">
-              IG
-            </div>
-            <span>IntentGuard</span>
+            <img src="/logo.png" alt="Aurel" className="w-5 h-5 rounded-lg" />
+            <span>Aurel</span>
           </div>
           <span>Runtime intent firewall for agentic payments</span>
           <div className="flex items-center gap-4">
