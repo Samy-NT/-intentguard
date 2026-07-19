@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { evaluateAmountThreshold } from "@/lib/rules/amount";
 import { evaluateDenylist, evaluateAllowlist } from "@/lib/rules/allowlist";
+import { evaluateVelocityAmount, evaluateVelocityCount } from "@/lib/rules/velocity";
 import { runRuleEngine } from "@/lib/rules/engine";
 import type { DbRule, PaymentIntent } from "@/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -220,5 +221,72 @@ describe("runRuleEngine", () => {
     const db = mockDb(rules);
     const result = await runRuleEngine(makeIntent({ amount: 500 }), db);
     expect(result.decision).toBe("allow");
+  });
+});
+
+// ── velocity evaluators ──────────────────────────────────────────────────────
+
+function mockVelocityDb(result: unknown) {
+  const query = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    gte: vi.fn(),
+    in: vi.fn(),
+    then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+      Promise.resolve(result).then(resolve, reject),
+  };
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  query.gte.mockReturnValue(query);
+  query.in.mockReturnValue(query);
+
+  const db = {
+    from: vi.fn(() => query),
+  } as unknown as SupabaseClient;
+
+  return { db, query };
+}
+
+describe("velocity evaluators", () => {
+  it("counts allow and flag decisions for count velocity", async () => {
+    const rule = makeRule({
+      id: "velocity_count",
+      rule_type: "velocity_count",
+      config: { window_seconds: 3600, max_count: 5, scope: "agent" },
+    });
+    const { db, query } = mockVelocityDb({ count: 0, error: null });
+
+    await evaluateVelocityCount(rule, { intent: makeIntent(), db });
+
+    expect(query.in).toHaveBeenCalledWith("decision", ["allow", "flag"]);
+  });
+
+  it("counts allow and flag decisions for amount velocity", async () => {
+    const rule = makeRule({
+      id: "velocity_amount",
+      rule_type: "velocity_amount",
+      config: { window_seconds: 3600, max_amount: 10_000, scope: "agent" },
+    });
+    const { db, query } = mockVelocityDb({ data: [], error: null });
+
+    await evaluateVelocityAmount(rule, { intent: makeIntent(), db });
+
+    expect(query.in).toHaveBeenCalledWith("decision", ["allow", "flag"]);
+  });
+
+  it("sums string numeric amounts returned by Postgres", async () => {
+    const rule = makeRule({
+      id: "velocity_amount",
+      rule_type: "velocity_amount",
+      config: { window_seconds: 3600, max_amount: 1_000, scope: "agent" },
+    });
+    const { db } = mockVelocityDb({ data: [{ amount: "900.50" }], error: null });
+
+    const result = await evaluateVelocityAmount(rule, {
+      intent: makeIntent({ amount: 200, currency: "USD" }),
+      db,
+    });
+
+    expect(result?.decision).toBe("block");
   });
 });

@@ -21,6 +21,7 @@ export interface PaymentIntent {
 }
 
 export type RuleDecision = "allow" | "block" | "flag";
+export type ApiKeyRole = "admin" | "operator" | "viewer";
 
 export interface RuleResult {
   decision: RuleDecision;
@@ -55,7 +56,10 @@ export interface DbApiKey {
   workspace_id: string;
   key_hash: string; // SHA-256 of the raw key
   name: string;
+  role: ApiKeyRole;
   is_active: boolean;
+  last_used_at: string | null;
+  revoked_at: string | null;
   created_at: string;
 }
 
@@ -87,5 +91,8 @@ export interface DbVerifyLog {
   decision: RuleDecision;
   triggered_rule: string | null;
   risk_score: number;
+  review_status: "not_required" | "pending" | "approved" | "rejected";
+  review_note: string | null;
+  reviewed_at: string | null;
   created_at: string;
 }

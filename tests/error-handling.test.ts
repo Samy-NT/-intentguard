@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { withTimeout, TimeoutError } from "@/lib/timeout";
 import { assertEnv, env } from "@/lib/env";
 

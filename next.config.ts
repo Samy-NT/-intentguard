@@ -5,6 +5,22 @@ const nextConfig: NextConfig = {
   // cause "__webpack_modules__[moduleId] is not a function" in the server bundle.
   // Let Node.js load these at runtime instead.
   serverExternalPackages: ["@supabase/supabase-js", "@supabase/ssr"],
+  turbopack: {
+    root: process.cwd(),
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
 };
 
 // withSentryConfig (source map upload) is intentionally omitted.

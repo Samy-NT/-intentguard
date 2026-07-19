@@ -3,6 +3,41 @@ import type { PaymentIntent, RuleDecision } from "@/types";
 // ─── Policy schema ────────────────────────────────────────────────────────────
 
 export interface WorkspacePolicy {
+  /** Block all crypto-like currencies when enabled. */
+  block_crypto?: boolean;
+
+  /** Maximum allowed transaction amount, assumed in the transaction currency. */
+  max_amount_usd?: number;
+
+  /** Daily amount cap displayed in settings; enforced through managed velocity rules. */
+  max_amount_daily_usd?: number;
+
+  /** Managed velocity settings synchronized into DB rules. */
+  velocity_max_per_hour?: number;
+  velocity_max_per_day?: number;
+  velocity_max_amount_per_hour?: number;
+
+  /** Recipient denylist from the settings UI. */
+  blocked_recipients?: string[];
+
+  /** Settings UI recipient allowlist. */
+  allowed_recipients?: string[];
+
+  /** Enables allowed_recipients as a closed-loop allowlist. */
+  strict_recipients?: boolean;
+
+  /** Known vendor caps from the settings UI. */
+  known_vendors?: Array<{ name: string; max_amount: number }>;
+
+  /** Per-agent caps from the settings UI. */
+  per_agent_rules?: Array<{
+    agent_id: string;
+    max_amount: number;
+    max_daily: number;
+    allowed_recipients: string;
+    active: boolean;
+  }>;
+
   /**
    * Closed list of approved recipient identifiers (emails, wallet addresses…).
    * When defined, any recipient NOT in this list is blocked.
@@ -45,19 +80,34 @@ export function evaluatePolicy(
   intent: PaymentIntent,
   policy: WorkspacePolicy
 ): PolicyResult | null {
-  // 1. Approved recipients
+  // 1. Universal transaction controls from the settings UI
+  const universalViolation = checkUniversalControls(intent, policy);
+  if (universalViolation) return universalViolation;
+
+  // 2. Denylist / allowlist
+  const blockedRecipientViolation = checkBlockedRecipients(intent, policy);
+  if (blockedRecipientViolation) return blockedRecipientViolation;
+
   const recipientViolation = checkApprovedRecipients(intent, policy);
   if (recipientViolation) return recipientViolation;
 
-  // 2. Allowed spending categories
+  // 3. Per-agent policy
+  const perAgentViolation = checkPerAgentRules(intent, policy);
+  if (perAgentViolation) return perAgentViolation;
+
+  // 4. Known vendor caps
+  const vendorViolation = checkKnownVendors(intent, policy);
+  if (vendorViolation) return vendorViolation;
+
+  // 5. Allowed spending categories
   const categoryViolation = checkAllowedCategories(intent, policy);
   if (categoryViolation) return categoryViolation;
 
-  // 3. Per-category amount caps
+  // 6. Per-category amount caps
   const amountViolation = checkMaxAmountByCategory(intent, policy);
   if (amountViolation) return amountViolation;
 
-  // 4. Time restrictions
+  // 7. Time restrictions
   const timeViolation = checkTimeRestrictions(policy);
   if (timeViolation) return timeViolation;
 
@@ -66,19 +116,114 @@ export function evaluatePolicy(
 
 // ─── Sub-checks ───────────────────────────────────────────────────────────────
 
+function checkUniversalControls(
+  intent: PaymentIntent,
+  policy: WorkspacePolicy
+): PolicyResult | null {
+  if (policy.block_crypto && ["BTC", "ETH", "USDC", "USDT"].includes(intent.currency.toUpperCase())) {
+    return {
+      decision: "block",
+      reason: `Crypto transaction blocked by workspace policy (${intent.currency})`,
+      risk_score: 95,
+    };
+  }
+
+  if (typeof policy.max_amount_usd === "number" && intent.amount > policy.max_amount_usd) {
+    return {
+      decision: "block",
+      reason: `Amount ${intent.amount} ${intent.currency} exceeds workspace max transaction amount of ${policy.max_amount_usd}`,
+      risk_score: 100,
+    };
+  }
+
+  return null;
+}
+
+function checkBlockedRecipients(
+  intent: PaymentIntent,
+  policy: WorkspacePolicy
+): PolicyResult | null {
+  if (!policy.blocked_recipients?.length) return null;
+
+  if (policy.blocked_recipients.includes(intent.recipient)) {
+    return {
+      decision: "block",
+      reason: `Recipient "${intent.recipient}" is blocked by workspace policy`,
+      risk_score: 100,
+    };
+  }
+
+  return null;
+}
+
 function checkApprovedRecipients(
   intent: PaymentIntent,
   policy: WorkspacePolicy
 ): PolicyResult | null {
-  if (!policy.approved_recipients?.length) return null;
+  const approvedRecipients =
+    policy.approved_recipients?.length
+      ? policy.approved_recipients
+      : policy.strict_recipients
+      ? policy.allowed_recipients
+      : undefined;
 
-  if (!policy.approved_recipients.includes(intent.recipient)) {
+  if (!approvedRecipients?.length) return null;
+
+  if (!approvedRecipients.includes(intent.recipient)) {
     return {
       decision: "block",
       reason: `Recipient "${intent.recipient}" is not in the workspace approved vendor list`,
       risk_score: 100,
     };
   }
+  return null;
+}
+
+function checkPerAgentRules(
+  intent: PaymentIntent,
+  policy: WorkspacePolicy
+): PolicyResult | null {
+  const rule = policy.per_agent_rules?.find((r) => r.active && r.agent_id === intent.agent_id);
+  if (!rule) return null;
+
+  if (typeof rule.max_amount === "number" && intent.amount > rule.max_amount) {
+    return {
+      decision: "block",
+      reason: `Amount ${intent.amount} ${intent.currency} exceeds per-agent cap of ${rule.max_amount} for ${intent.agent_id}`,
+      risk_score: 95,
+    };
+  }
+
+  const allowedRecipients = rule.allowed_recipients
+    .split(/[,\n]/)
+    .map((recipient) => recipient.trim())
+    .filter(Boolean);
+  if (allowedRecipients.length > 0 && !allowedRecipients.includes(intent.recipient)) {
+    return {
+      decision: "block",
+      reason: `Recipient "${intent.recipient}" is not allowed for agent ${intent.agent_id}`,
+      risk_score: 90,
+    };
+  }
+
+  return null;
+}
+
+function checkKnownVendors(
+  intent: PaymentIntent,
+  policy: WorkspacePolicy
+): PolicyResult | null {
+  const vendor = policy.known_vendors?.find((v) => v.name === intent.recipient || v.name === intent.merchant_id);
+  if (!vendor) return null;
+
+  if (typeof vendor.max_amount === "number" && intent.amount > vendor.max_amount) {
+    return {
+      decision: "block",
+      reason: `Amount ${intent.amount} ${intent.currency} exceeds vendor cap of ${vendor.max_amount} for "${vendor.name}"`,
+      risk_score: 95,
+    };
+  }
+
   return null;
 }
 

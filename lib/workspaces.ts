@@ -5,6 +5,7 @@ import type { WebhookConfig } from "@/lib/webhooks/notify";
 export interface WorkspaceConfig {
   policy: WorkspacePolicy | null;
   webhook: WebhookConfig | null;
+  semantic_fail_mode: "allow" | "flag" | "block";
 }
 
 /**
@@ -18,20 +19,27 @@ export async function getWorkspaceConfig(
 ): Promise<WorkspaceConfig> {
   const { data, error } = await db
     .from("workspaces")
-    .select("policy, webhook_url, webhook_secret, webhook_threshold")
+    .select("policy, webhook_url, webhook_secret, webhook_threshold, semantic_fail_mode")
     .eq("id", workspaceId)
     .maybeSingle();
 
   if (error) {
     // Most likely cause: migration 003 not yet run (column webhook_threshold missing)
     console.error("[workspace] DB error fetching config — is migration 003 applied?", error.message);
-    return { policy: null, webhook: null };
+    return { policy: null, webhook: null, semantic_fail_mode: "flag" };
   }
 
   if (!data) {
     console.warn("[workspace] No row found for workspace_id:", workspaceId);
-    return { policy: null, webhook: null };
+    return { policy: null, webhook: null, semantic_fail_mode: "flag" };
   }
+
+  console.log("[workspace] config row loaded:", {
+    workspace_id: workspaceId,
+    has_policy: !!data.policy,
+    webhook_configured: Boolean(data.webhook_url),
+    webhook_threshold: data.webhook_threshold ?? null,
+  });
 
   const policy =
     data.policy && typeof data.policy === "object"
@@ -48,5 +56,16 @@ export async function getWorkspaceConfig(
         }
       : null;
 
-  return { policy, webhook };
+  console.log("[workspace] config resolved:", {
+    has_policy: !!policy,
+    webhook_configured: Boolean(webhook),
+    webhook_threshold: webhook?.threshold ?? null,
+  });
+
+  const semantic_fail_mode =
+    data.semantic_fail_mode === "allow" || data.semantic_fail_mode === "block" || data.semantic_fail_mode === "flag"
+      ? data.semantic_fail_mode
+      : "flag";
+
+  return { policy, webhook, semantic_fail_mode };
 }
