@@ -122,10 +122,14 @@ export async function analyzeIntent(intent: {
   agent_context: string;
   mission_scope?: string;
 }): Promise<SemanticAnalysis> {
-  const client = new Anthropic();
-
   // Pre-screen for deterministic patterns before calling Claude
   const preScreen = preScreenContext(intent.agent_context, intent.mission_scope);
+
+  if (process.env.ANTHROPIC_API_KEY?.startsWith("demo-")) {
+    return demoSemanticAnalysis(preScreen);
+  }
+
+  const client = new Anthropic();
 
   const preScreenNote =
     preScreen.vectors.length > 0
@@ -219,5 +223,34 @@ function failOpen(reason: string, preScreen?: ReturnType<typeof preScreenContext
     attack_vectors: vectors,
     mission_alignment: preScreen?.mission_alignment ?? "not_provided",
     unavailable: true,
+  };
+}
+
+function demoSemanticAnalysis(preScreen: ReturnType<typeof preScreenContext>): SemanticAnalysis {
+  const vectors = preScreen.vectors;
+  const riskScore = preScreen.score_contribution;
+  const suspicious = vectors.length > 0 || riskScore >= 30;
+
+  return {
+    injection_detected: false,
+    anomaly_detected: suspicious,
+    explanation: suspicious
+      ? `Local demo analysis detected ${vectors.join(", ")}`
+      : "Local demo analysis found no semantic anomalies",
+    risk_score: riskScore,
+    mission_scope_alignment:
+      preScreen.mission_alignment === "drift_detected"
+        ? "incoherent"
+        : preScreen.mission_alignment === "coherent"
+        ? "coherent"
+        : "not_provided",
+    alignment_reasoning:
+      preScreen.mission_alignment === "drift_detected"
+        ? "The agent reasoning appears outside the declared mission scope."
+        : preScreen.mission_alignment === "coherent"
+        ? "The transaction matches the declared mission scope."
+        : "No mission scope declared.",
+    attack_vectors: vectors,
+    mission_alignment: preScreen.mission_alignment,
   };
 }
