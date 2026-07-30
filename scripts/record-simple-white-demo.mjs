@@ -1,54 +1,51 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
-import { createRequire } from "node:module";
-import Module from "node:module";
-
-const bundledNodeModules =
-  "D:/Users/adamg/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules";
-const bundledPlaywrightNodeModules = `${bundledNodeModules}/.pnpm/playwright@1.61.1/node_modules`;
-const bundledPlaywrightCoreNodeModules = `${bundledNodeModules}/.pnpm/playwright-core@1.61.1/node_modules`;
-
-process.env.NODE_PATH = [
-  bundledNodeModules,
-  bundledPlaywrightNodeModules,
-  bundledPlaywrightCoreNodeModules,
-  process.env.NODE_PATH,
-]
-  .filter(Boolean)
-  .join(path.delimiter);
-Module._initPaths();
-
-const require = createRequire(import.meta.url);
-const { chromium } = require(`${bundledPlaywrightNodeModules}/playwright`);
+import { promisify } from "node:util";
+import { chromium } from "playwright";
+import { assertReadableFile, findBrowserExecutable } from "./demo-recorder-utils.mjs";
 
 const root = process.cwd();
 const outputDir = path.join(root, "outputs", "simple-white-demo");
 const rawDir = path.join(outputDir, "raw");
-const htmlFile = path.join(outputDir, "index.html");
+const htmlFile = path.join(root, "docs", "loom-demo", "simple-white-demo.html");
 const finalVideo = path.join(outputDir, "aurel-simple-white-demo.webm");
-const browserExecutableCandidates = [
-  "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-  "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
-];
+const mixedVideo = path.join(outputDir, "aurel-simple-white-demo-with-music.webm");
+const runCommand = promisify(execFile);
 
-async function findBrowserExecutable() {
-  for (const candidate of browserExecutableCandidates) {
-    try {
-      await fs.access(candidate);
-      return candidate;
-    } catch {
-      // Try the next installed browser path.
-    }
-  }
-  return undefined;
+async function addBackgroundMusic(videoFile) {
+  // A small synthetic pulse keeps the demo self-contained and safe to publish.
+  const musicFilter = [
+    "[1:a]volume=0.055[pad]",
+    "[2:a]volume=0.095,tremolo=f=2:d=0.85[pulse]",
+    "[3:a]volume=0.05,tremolo=f=1:d=0.75[click]",
+    "[pad][pulse][click]amix=inputs=3:normalize=0,afade=t=in:st=0:d=1.5,afade=t=out:st=62:d=3[music]",
+  ].join(";");
+
+  await fs.rm(mixedVideo, { force: true });
+  await runCommand("ffmpeg", [
+    "-y",
+    "-i", videoFile,
+    "-f", "lavfi", "-i", "sine=frequency=220:sample_rate=44100:duration=67",
+    "-f", "lavfi", "-i", "sine=frequency=329.63:sample_rate=44100:duration=67",
+    "-f", "lavfi", "-i", "sine=frequency=659.25:sample_rate=44100:duration=67",
+    "-filter_complex", musicFilter,
+    "-map", "0:v:0",
+    "-map", "[music]",
+    "-c:v", "copy",
+    "-c:a", "libopus",
+    "-b:a", "96k",
+    "-shortest",
+    mixedVideo,
+  ]);
+  await fs.rename(mixedVideo, videoFile);
 }
 
 async function main() {
   await fs.mkdir(rawDir, { recursive: true });
   await fs.rm(finalVideo, { force: true });
+  await assertReadableFile(htmlFile, "White demo HTML");
 
   const browser = await chromium.launch({
     headless: true,
@@ -77,6 +74,7 @@ async function main() {
 
   const rawVideo = await video.path();
   await fs.copyFile(rawVideo, finalVideo);
+  await addBackgroundMusic(finalVideo);
   const stats = await fs.stat(finalVideo);
   console.log(JSON.stringify({ finalVideo, bytes: stats.size }, null, 2));
 }
