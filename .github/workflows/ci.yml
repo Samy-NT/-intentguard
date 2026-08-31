@@ -19,10 +19,31 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
 
       - name: Run tests
         run: npm test
+
+      - name: Run agent integration tests
+        run: npm run test:agent-integrations
+
+      - name: Build application
+        run: npm run build
+
+      - name: Package agent integrations
+        run: |
+          npm run build:openclaw-plugin
+          npm run smoke:openclaw-plugin
+          npm run package:openclaw-plugin
+          npm run build:hermes-plugin
+          npm run package:hermes-plugin
+          npm run build:crewai-integration
+          npm run package:crewai-integration
+          npm run package:codex-plugin
+          npm run package:agent-integrations

@@ -24,22 +24,13 @@ export async function getWorkspaceConfig(
     .maybeSingle();
 
   if (error) {
-    // Most likely cause: migration 003 not yet run (column webhook_threshold missing)
-    console.error("[workspace] DB error fetching config — is migration 003 applied?", error.message);
+    console.error("[workspace] DB error fetching config:", error.message);
     return { policy: null, webhook: null, semantic_fail_mode: "flag" };
   }
 
   if (!data) {
-    console.warn("[workspace] No row found for workspace_id:", workspaceId);
     return { policy: null, webhook: null, semantic_fail_mode: "flag" };
   }
-
-  console.log("[workspace] config row loaded:", {
-    workspace_id: workspaceId,
-    has_policy: !!data.policy,
-    webhook_configured: Boolean(data.webhook_url),
-    webhook_threshold: data.webhook_threshold ?? null,
-  });
 
   const policy =
     data.policy && typeof data.policy === "object"
@@ -53,14 +44,13 @@ export async function getWorkspaceConfig(
           secret: typeof data.webhook_secret === "string" ? data.webhook_secret : undefined,
           threshold:
             typeof data.webhook_threshold === "number" ? data.webhook_threshold : 70,
+          escalate_on_block: policy?.escalate_on_block !== false,
+          escalate_on_flag: policy?.escalate_on_flag !== false,
+          escalate_on_risk_score: policy?.escalate_on_risk_score !== false,
+          escalate_above_amount:
+            typeof policy?.escalate_above_amount === "number" ? policy.escalate_above_amount : 0,
         }
       : null;
-
-  console.log("[workspace] config resolved:", {
-    has_policy: !!policy,
-    webhook_configured: Boolean(webhook),
-    webhook_threshold: webhook?.threshold ?? null,
-  });
 
   const semantic_fail_mode =
     data.semantic_fail_mode === "allow" || data.semantic_fail_mode === "block" || data.semantic_fail_mode === "flag"

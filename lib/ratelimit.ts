@@ -10,6 +10,21 @@ import { Redis } from "@upstash/redis";
 // ── In-memory fallback ────────────────────────────────────────────────────────
 
 const memoryStore = new Map<string, { count: number; resetAt: number }>();
+const CLEANUP_INTERVAL_MS = 60_000; // 1 minute
+
+function cleanupExpiredEntries() {
+  const now = Date.now();
+  for (const [key, entry] of memoryStore.entries()) {
+    if (now > entry.resetAt) {
+      memoryStore.delete(key);
+    }
+  }
+}
+
+// Start cleanup interval
+if (typeof setInterval !== 'undefined') {
+  setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
+}
 
 function memoryRateLimit(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now();

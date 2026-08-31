@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { apiKeyHeaders, getStoredApiKey, storeApiKey } from "./api-key";
 import { Sidebar } from "@/app/components/Sidebar";
-import { Pencil, Inbox, Search } from "lucide-react";
+import { Pencil, Inbox, Search, ShieldCheck } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,6 +21,8 @@ interface LogEntry {
   review_status: "not_required" | "pending" | "approved" | "rejected";
   review_note: string | null;
   reviewed_at: string | null;
+  audit_signature: string | null;
+  audit_signature_version: string | null;
   created_at: string;
 }
 
@@ -167,10 +169,10 @@ function RiskBar({ score }: { score: number }) {
   const color = score >= 75 ? "bg-red-500" : score >= 40 ? "bg-amber-500" : "bg-emerald-500";
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${score}%` }} />
+      <div className="w-16 h-1.5 bg-zinc-800  overflow-hidden">
+        <div className={`h-full  transition-all ${color}`} style={{ width: `${score}%` }} />
       </div>
-      <span className="text-xs text-zinc-400 tabular-nums w-6">{score}</span>
+      <span className="text-xs text-stone-400 tabular-nums w-6">{score}</span>
     </div>
   );
 }
@@ -178,8 +180,8 @@ function RiskBar({ score }: { score: number }) {
 function DecisionBadge({ decision }: { decision: LogEntry["decision"] }) {
   const s = DECISION_STYLES[decision];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${s.badge}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1  text-xs font-semibold border ${s.badge}`}>
+      <span className={`w-1.5 h-1.5  ${s.dot}`} />
       {s.label}
     </span>
   );
@@ -187,12 +189,12 @@ function DecisionBadge({ decision }: { decision: LogEntry["decision"] }) {
 
 function FilterBadge({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 bg-violet-500/10 border border-violet-500/25 text-violet-300 text-xs px-2.5 py-1 rounded-full font-medium">
+    <span className="inline-flex items-center gap-1 bg-stone-100/10 border border-stone-500/30 text-stone-300 text-xs px-2.5 py-1  font-medium">
       {label}
       <button
         type="button"
         onClick={onRemove}
-        className="ml-0.5 text-violet-400 hover:text-white transition-colors leading-none"
+        className="ml-0.5 text-stone-300 hover:text-white transition-colors leading-none"
         aria-label="Remove filter"
       >
         ×
@@ -233,7 +235,7 @@ function EditRuleModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+      <div className="relative bg-zinc-900 border border-zinc-700  shadow-2xl w-full max-w-sm p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="font-semibold text-white text-sm">{cfg.label}</h3>
@@ -246,7 +248,7 @@ function EditRuleModal({
 
         <div>
           {cfg.type === "number" && (
-            <div className="flex items-center bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+            <div className="flex items-center bg-zinc-800 border border-zinc-700  overflow-hidden">
               {cfg.prefix && (
                 <span className="px-3 text-zinc-500 text-sm border-r border-zinc-700 select-none">{cfg.prefix}</span>
               )}
@@ -269,9 +271,9 @@ function EditRuleModal({
               role="switch"
               aria-checked={boolVal}
               onClick={() => setBoolVal(!boolVal)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${boolVal ? "bg-violet-600" : "bg-zinc-700"}`}
+              className={`relative inline-flex h-6 w-11 items-center  transition-colors ${boolVal ? "bg-stone-100" : "bg-zinc-700"}`}
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${boolVal ? "translate-x-6" : "translate-x-1"}`} />
+              <span className={`inline-block h-4 w-4 transform  bg-white shadow transition-transform ${boolVal ? "translate-x-6" : "translate-x-1"}`} />
             </button>
           )}
           {cfg.type === "tags" && (
@@ -282,7 +284,7 @@ function EditRuleModal({
                 onChange={(e) => setTagsInput(e.target.value)}
                 rows={4}
                 placeholder="bad-actor@example.com&#10;offshore-wallet.ru"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 font-mono resize-none transition-colors"
+                className="w-full bg-zinc-800 border border-zinc-700  px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 font-mono resize-none transition-colors"
                 autoFocus
               />
             </div>
@@ -293,7 +295,7 @@ function EditRuleModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 text-sm text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 transition-colors px-4 py-2.5 rounded-xl"
+            className="flex-1 text-sm text-stone-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 transition-colors px-4 py-2.5 "
           >
             Cancel
           </button>
@@ -301,9 +303,9 @@ function EditRuleModal({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-stone-100 hover:bg-white disabled:bg-zinc-900 disabled:cursor-not-allowed text-black disabled:text-zinc-600 text-sm font-medium px-4 py-2.5  transition-colors"
           >
-            {saving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+            {saving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white  animate-spin" />}
             {saving ? "Saving…" : "Save"}
           </button>
         </div>
@@ -345,7 +347,7 @@ function TriggeredRuleModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
+      <div className="relative bg-zinc-900 border border-zinc-700  shadow-2xl w-full max-w-md p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="font-semibold text-white text-sm">Triggered Rule</h3>
@@ -356,7 +358,7 @@ function TriggeredRuleModal({
 
         {/* Rule ID */}
         {log.triggered_rule && (
-          <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 space-y-2">
+          <div className="bg-zinc-800/60 border border-zinc-700  p-4 space-y-2">
             <div className="text-[10px] text-zinc-600 uppercase tracking-widest font-mono mb-2">Rule identifier</div>
             <code className="text-xs font-mono text-amber-400 break-all">{log.triggered_rule}</code>
           </div>
@@ -367,12 +369,12 @@ function TriggeredRuleModal({
           <div className="text-[10px] text-zinc-600 uppercase tracking-widest font-mono">Transaction</div>
           <div className="grid grid-cols-2 gap-2 text-sm">
             {[
-              ["Decision", <span key="d" className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${decisionStyle.badge}`}><span className={`w-1.5 h-1.5 rounded-full ${decisionStyle.dot}`} />{log.decision}</span>],
+              ["Decision", <span key="d" className={`inline-flex items-center gap-1 px-2 py-0.5  text-xs font-semibold border ${decisionStyle.badge}`}><span className={`w-1.5 h-1.5  ${decisionStyle.dot}`} />{log.decision}</span>],
               ["Risk score", <span key="r" className={log.risk_score >= 70 ? "text-red-400 font-semibold" : log.risk_score >= 40 ? "text-amber-400 font-semibold" : "text-emerald-400"}>{log.risk_score}/100</span>],
               ["Amount", <span key="a" className="font-mono text-white">{log.currency} {log.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>],
-              ["Recipient", <span key="rec" className="text-zinc-400 text-xs truncate">{log.recipient}</span>],
+              ["Recipient", <span key="rec" className="text-stone-400 text-xs truncate">{log.recipient}</span>],
             ].map(([k, v]) => (
-              <div key={String(k)} className="bg-zinc-800/40 border border-zinc-800 rounded-lg p-2.5">
+              <div key={String(k)} className="bg-zinc-800/40 border border-stone-800  p-2.5">
                 <div className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1 font-mono">{k}</div>
                 <div>{v}</div>
               </div>
@@ -385,15 +387,15 @@ function TriggeredRuleModal({
           <div className="space-y-2">
             <div className="text-[10px] text-zinc-600 uppercase tracking-widest font-mono">Workspace limits</div>
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs bg-zinc-800/40 border border-zinc-800 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between text-xs bg-zinc-800/40 border border-stone-800  px-3 py-2">
                 <span className="text-zinc-500">Max per tx</span>
                 <span className="font-mono text-zinc-300">${settings.max_amount_usd.toLocaleString()} USD</span>
               </div>
-              <div className="flex items-center justify-between text-xs bg-zinc-800/40 border border-zinc-800 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between text-xs bg-zinc-800/40 border border-stone-800  px-3 py-2">
                 <span className="text-zinc-500">Max tx / hour</span>
                 <span className="font-mono text-zinc-300">{settings.velocity_max_per_hour} tx/hr</span>
               </div>
-              <div className="flex items-center justify-between text-xs bg-zinc-800/40 border border-zinc-800 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between text-xs bg-zinc-800/40 border border-stone-800  px-3 py-2">
                 <span className="text-zinc-500">Max vol / hour</span>
                 <span className="font-mono text-zinc-300">${settings.velocity_max_amount_per_hour.toLocaleString()} USD</span>
               </div>
@@ -411,9 +413,9 @@ function TriggeredRuleModal({
                   key={String(cfg.key)}
                   type="button"
                   onClick={() => { onAdjustRule(cfg); onClose(); }}
-                  className="flex items-center gap-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-300 hover:text-white transition-colors px-3 py-2 rounded-lg"
+                  className="flex items-center gap-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-300 hover:text-white transition-colors px-3 py-2 "
                 >
-                  <Pencil className="w-3 h-3 text-violet-400" />
+                  <Pencil className="w-3 h-3 text-stone-300" />
                   {cfg.label}
                 </button>
               ))}
@@ -424,7 +426,7 @@ function TriggeredRuleModal({
         <button
           type="button"
           onClick={onClose}
-          className="w-full text-sm text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 transition-colors px-4 py-2.5 rounded-xl"
+          className="w-full text-sm text-stone-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 transition-colors px-4 py-2.5 "
         >
           Close
         </button>
@@ -445,18 +447,18 @@ function ActiveRulesPanel({
   onEdit: (cfg: RuleConfig) => void;
 }) {
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden sticky top-[73px]">
-      <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+    <div className="aurel-panel overflow-hidden sticky top-[73px]">
+      <div className="px-5 py-4 border-b border-stone-800 flex items-center justify-between">
         <div>
           <h2 className="font-semibold text-sm text-white">Active Rules</h2>
           <p className="text-[11px] text-zinc-500 mt-0.5">Live workspace policy</p>
         </div>
-        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="w-2 h-2  bg-emerald-500 animate-pulse" />
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-10 text-zinc-600 text-xs gap-2">
-          <span className="w-3.5 h-3.5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
+          <span className="w-3.5 h-3.5 border-2 border-zinc-700 border-t-zinc-400  animate-spin" />
           Loading rules…
         </div>
       ) : !settings ? (
@@ -466,16 +468,16 @@ function ActiveRulesPanel({
       ) : (
         <div className="divide-y divide-zinc-800/60">
           {RULE_CONFIGS.map((cfg) => (
-            <div key={String(cfg.key)} className="px-5 py-3.5 flex items-start justify-between gap-3 hover:bg-zinc-800/20 transition-colors group">
+            <div key={String(cfg.key)} className="px-5 py-3.5 flex items-start justify-between gap-3 hover:bg-stone-950/20 transition-colors group">
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-medium text-zinc-300 leading-none mb-0.5">{cfg.label}</div>
                 <div className="text-[11px] text-zinc-600">{cfg.description}</div>
-                <div className="text-xs font-mono text-zinc-400 mt-1">{ruleValueDisplay(cfg, settings)}</div>
+                <div className="text-xs font-mono text-stone-400 mt-1">{ruleValueDisplay(cfg, settings)}</div>
               </div>
               <button
                 type="button"
                 onClick={() => onEdit(cfg)}
-                className="flex-shrink-0 text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-violet-400 transition-colors opacity-0 group-hover:opacity-100 border border-zinc-800 hover:border-violet-500/40 px-2 py-1 rounded-lg"
+                className="flex-shrink-0 text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-stone-300 transition-colors opacity-0 group-hover:opacity-100 border border-stone-800 hover:border-stone-500/60 px-2 py-1 "
               >
                 Edit
               </button>
@@ -484,7 +486,7 @@ function ActiveRulesPanel({
         </div>
       )}
 
-      <div className="px-5 py-3 border-t border-zinc-800">
+      <div className="px-5 py-3 border-t border-stone-800">
         <Link
           href="/dashboard/settings"
           className="w-full flex items-center justify-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-300 transition-colors py-1.5"
@@ -513,8 +515,8 @@ function WebhookJobsPanel({
   } as const;
 
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-zinc-800">
+    <div className="aurel-panel overflow-hidden">
+      <div className="px-5 py-4 border-b border-stone-800">
         <h2 className="font-semibold text-sm text-white">Webhook Jobs</h2>
         <p className="text-[11px] text-zinc-500 mt-0.5">Retry queue and delivery state</p>
       </div>
@@ -541,7 +543,7 @@ function WebhookJobsPanel({
                 <button
                   type="button"
                   onClick={() => onRetry(job.id)}
-                  className="text-[10px] uppercase tracking-wider text-violet-400 hover:text-violet-300 border border-violet-500/30 px-2 py-1 rounded-lg"
+                  className="text-[10px] uppercase tracking-wider text-stone-300 hover:text-stone-300 border border-stone-500/40 px-2 py-1 "
                 >
                   Retry
                 </button>
@@ -585,13 +587,13 @@ function FilterBar({
 }) {
   const DECISIONS: LogEntry["decision"][] = ["allow", "block", "flag"];
   const decisionColors: Record<LogEntry["decision"], { active: string; inactive: string }> = {
-    allow: { active: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400", inactive: "border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400" },
-    block: { active: "bg-red-500/15 border-red-500/40 text-red-400",            inactive: "border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400" },
-    flag:  { active: "bg-amber-500/15 border-amber-500/40 text-amber-400",      inactive: "border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400" },
+    allow: { active: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400", inactive: "border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-stone-400" },
+    block: { active: "bg-red-500/15 border-red-500/40 text-red-400",            inactive: "border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-stone-400" },
+    flag:  { active: "bg-amber-500/15 border-amber-500/40 text-amber-400",      inactive: "border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-stone-400" },
   };
 
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl px-5 py-4 space-y-4">
+    <div className="aurel-panel px-5 py-4 space-y-4">
       <div className="flex flex-wrap gap-3 items-center">
         {/* Decision toggles */}
         <div className="flex items-center gap-1.5">
@@ -602,7 +604,7 @@ function FilterBar({
                 key={d}
                 type="button"
                 onClick={() => onToggleDecision(d)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border uppercase tracking-wide transition-colors ${active ? decisionColors[d].active : decisionColors[d].inactive}`}
+                className={`text-xs font-semibold px-3 py-1.5  border uppercase tracking-wide transition-colors ${active ? decisionColors[d].active : decisionColors[d].inactive}`}
               >
                 {d}
               </button>
@@ -616,7 +618,7 @@ function FilterBar({
         <select
           value={period}
           onChange={(e) => onPeriodChange(e.target.value as PeriodFilter)}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+          className="bg-zinc-800 border border-zinc-700  px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-stone-400/20"
         >
           <option value="all">All time</option>
           <option value="1h">Last 1h</option>
@@ -629,7 +631,7 @@ function FilterBar({
         <select
           value={sort}
           onChange={(e) => onSortChange(e.target.value as SortOption)}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+          className="bg-zinc-800 border border-zinc-700  px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-stone-400/20"
         >
           <option value="date_desc">Newest first</option>
           <option value="risk_desc">Highest risk first</option>
@@ -645,7 +647,7 @@ function FilterBar({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search intent_id, agent, recipient…"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-7 pr-3 py-1.5 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 transition-colors"
+              className="w-full bg-zinc-800 border border-zinc-700  pl-7 pr-3 py-1.5 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors"
             />
             {search && (
               <button
@@ -670,7 +672,7 @@ function FilterBar({
             min={0}
             max={riskMax}
             onChange={(e) => onRiskMinChange(Math.max(0, Math.min(riskMax, Number(e.target.value))))}
-            className="w-14 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-center text-zinc-300 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+            className="w-14 bg-zinc-800 border border-zinc-700  px-2 py-1 text-center text-zinc-300 focus:outline-none focus:ring-2 focus:ring-stone-400/20"
           />
           <span className="text-zinc-700">—</span>
           <input
@@ -679,7 +681,7 @@ function FilterBar({
             min={riskMin}
             max={100}
             onChange={(e) => onRiskMaxChange(Math.max(riskMin, Math.min(100, Number(e.target.value))))}
-            className="w-14 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-center text-zinc-300 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+            className="w-14 bg-zinc-800 border border-zinc-700  px-2 py-1 text-center text-zinc-300 focus:outline-none focus:ring-2 focus:ring-stone-400/20"
           />
         </div>
       </div>
@@ -755,6 +757,7 @@ export default function DashboardPage() {
   const [webhookJobs, setWebhookJobs] = useState<WebhookJob[]>([]);
   const [webhookJobsLoading, setWebhookJobsLoading] = useState(true);
   const [apiKey, setApiKey] = useState("");
+  const [verifyingAuditId, setVerifyingAuditId] = useState<string | null>(null);
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const [selectedDecisions, setSelectedDecisions] = useState<Set<LogEntry["decision"]>>(
@@ -935,6 +938,25 @@ export default function DashboardPage() {
     if (res.ok) await fetchWebhookJobs();
   }
 
+  async function verifyAuditLog(log: LogEntry) {
+    setVerifyingAuditId(log.id);
+    const res = await fetch(`/api/v1/workspace/audit-verify?id=${encodeURIComponent(log.id)}`, {
+      headers: apiKeyHeaders(apiKey),
+    });
+    const data = await res.json().catch(() => ({}));
+    setVerifyingAuditId(null);
+
+    clearTimeout(toastTimer.current);
+    if (!res.ok) {
+      setSaveToast(data.error ?? `Audit verification failed with HTTP ${res.status}`);
+    } else if (data.valid) {
+      setSaveToast("Audit signature verified");
+    } else {
+      setSaveToast(data.reason ?? "Audit signature invalid");
+    }
+    toastTimer.current = setTimeout(() => setSaveToast(null), 3000);
+  }
+
   const toggleDecision = (d: LogEntry["decision"]) => {
     setSelectedDecisions((prev) => {
       const next = new Set(prev);
@@ -945,22 +967,17 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#09090e]">
+    <div className="flex min-h-screen aurel-bg">
       <Sidebar />
       
       <main className="flex-1 ml-64">
         {/* ── Header ─────────────────────────────────── */}
-        <header className="border-b border-zinc-800/60 bg-[#09090e]/80 backdrop-blur-sm sticky top-0 z-40">
+        <header className="border-b border-stone-800/60 bg-black/80 backdrop-blur-sm sticky top-0 z-40">
           <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2 group">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold">IG</div>
-                <span className="font-bold text-lg tracking-tight group-hover:text-zinc-300 transition-colors">IntentGuard</span>
-              </Link>
-              <div className="hidden sm:block w-px h-5 bg-zinc-700" />
               <nav className="hidden sm:flex items-center gap-1">
-                <Link href="/dashboard" className="text-sm text-white bg-zinc-800 px-3 py-1.5 rounded-lg">Logs</Link>
-                <Link href="/dashboard/settings" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800">Settings</Link>
+                <Link href="/dashboard" className="text-sm text-white bg-zinc-800 px-3 py-1.5 ">Logs</Link>
+                <Link href="/dashboard/settings" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5  hover:bg-stone-950">Settings</Link>
               </nav>
             </div>
             <div className="flex items-center gap-3">
@@ -972,10 +989,10 @@ export default function DashboardPage() {
                   storeApiKey(e.target.value);
                 }}
                 placeholder="API key"
-                className="w-44 bg-zinc-900 border border-zinc-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                className="w-44 bg-zinc-900 border border-stone-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-1.5  focus:outline-none focus:ring-2 focus:ring-stone-400/20"
               />
               <div className="flex items-center gap-2 text-xs text-zinc-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="w-1.5 h-1.5  bg-emerald-400 animate-pulse" />
                 Live · 5s
               </div>
               {lastRefresh && (
@@ -985,7 +1002,7 @@ export default function DashboardPage() {
               )}
               <button
                 onClick={() => fetchLogs()}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg"
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 "
               >
                 Refresh
               </button>
@@ -1002,7 +1019,7 @@ export default function DashboardPage() {
             { label: "Blocked", value: blocked, color: "text-red-400", pct: total ? Math.round((blocked / total) * 100) : 0 },
             { label: "Flagged", value: flagged, color: "text-amber-400", pct: total ? Math.round((flagged / total) * 100) : 0 },
           ].map((s) => (
-            <div key={s.label} className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5">
+            <div key={s.label} className="aurel-panel p-5">
               <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">{s.label}</div>
               <div className={`text-3xl font-bold ${s.color}`}>{s.value}</div>
               {"pct" in s && <div className="text-xs text-zinc-600 mt-1">{s.pct}% of total</div>}
@@ -1012,7 +1029,7 @@ export default function DashboardPage() {
 
         {/* ── Error ────────────────────────────────── */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-5 py-4 mb-6 text-sm">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400  px-5 py-4 mb-6 text-sm">
             <strong>Error loading logs:</strong> {error}
           </div>
         )}
@@ -1036,9 +1053,9 @@ export default function DashboardPage() {
               onSortChange={setSort}
             />
 
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="aurel-panel overflow-hidden">
               {/* Table header with counter + active badges */}
-              <div className="px-5 py-3.5 border-b border-zinc-800 flex flex-wrap items-center gap-3">
+              <div className="px-5 py-3.5 border-b border-stone-800 flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <h2 className="font-semibold text-sm text-white flex-shrink-0">Verifications</h2>
                   <ActiveFilterBadges
@@ -1056,14 +1073,14 @@ export default function DashboardPage() {
                   />
                 </div>
                 <span className="text-xs text-zinc-600 flex-shrink-0">
-                  Showing <span className="text-zinc-400 font-medium">{filteredLogs.length}</span> of{" "}
-                  <span className="text-zinc-400 font-medium">{total}</span>
+                  Showing <span className="text-stone-400 font-medium">{filteredLogs.length}</span> of{" "}
+                  <span className="text-stone-400 font-medium">{total}</span>
                 </span>
               </div>
 
               {loading ? (
                 <div className="flex items-center justify-center py-20 text-zinc-600 text-sm gap-3">
-                  <div className="w-4 h-4 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-zinc-700 border-t-zinc-400  animate-spin" />
                   Loading logs…
                 </div>
               ) : filteredLogs.length === 0 ? (
@@ -1092,7 +1109,7 @@ export default function DashboardPage() {
                           setRiskMax(100);
                           setSort("date_desc");
                         }}
-                        className="text-xs text-violet-400 hover:text-violet-300 transition-colors mt-1"
+                        className="text-xs text-stone-300 hover:text-stone-300 transition-colors mt-1"
                       >
                         Clear all filters
                       </button>
@@ -1116,18 +1133,18 @@ export default function DashboardPage() {
                     </thead>
                     <tbody className="divide-y divide-zinc-800/60">
                       {filteredLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-zinc-800/30 transition-colors group">
+                        <tr key={log.id} className="hover:bg-stone-950/30 transition-colors group">
                           <td className="px-5 py-4 text-zinc-500 whitespace-nowrap">
                             <div className="text-xs">{formatDate(log.created_at)}</div>
                             <div className="text-xs font-mono mt-0.5 text-zinc-600">{formatTime(log.created_at)}</div>
                           </td>
                           <td className="px-5 py-4">
-                            <code className="text-xs font-mono text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded">
+                            <code className="text-xs font-mono text-stone-400 bg-zinc-800/50 px-2 py-0.5 rounded">
                               {log.intent_id.length > 16 ? log.intent_id.slice(0, 16) + "…" : log.intent_id}
                             </code>
                           </td>
                           <td className="px-5 py-4 hidden md:table-cell">
-                            <span className="text-zinc-400 text-xs">{log.agent_id}</span>
+                            <span className="text-stone-400 text-xs">{log.agent_id}</span>
                           </td>
                           <td className="px-5 py-4 text-right font-mono font-medium whitespace-nowrap">
                             <span className="text-white">
@@ -1136,7 +1153,7 @@ export default function DashboardPage() {
                             <span className="text-zinc-600 text-xs ml-1">{log.currency}</span>
                           </td>
                           <td className="px-5 py-4 hidden lg:table-cell">
-                            <span className="text-zinc-400 text-xs truncate max-w-[140px] block">{log.recipient}</span>
+                            <span className="text-stone-400 text-xs truncate max-w-[140px] block">{log.recipient}</span>
                           </td>
                           <td className="px-5 py-4 text-center">
                             <div className="flex flex-col items-center gap-1">
@@ -1156,11 +1173,23 @@ export default function DashboardPage() {
                             <RiskBar score={log.risk_score} />
                           </td>
                           <td className="px-5 py-4 text-right whitespace-nowrap">
+                            {log.audit_signature && (
+                              <button
+                                type="button"
+                                onClick={() => verifyAuditLog(log)}
+                                disabled={verifyingAuditId === log.id}
+                                className="mr-2 inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-emerald-500 hover:text-emerald-300 transition-colors border border-emerald-500/20 hover:border-emerald-500/50 px-2.5 py-1.5  opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                                title="Verify audit signature"
+                              >
+                                <ShieldCheck className="w-3 h-3" />
+                                {verifyingAuditId === log.id ? "Checking" : "Audit"}
+                              </button>
+                            )}
                             {(log.decision === "block" || log.decision === "flag") && log.triggered_rule && (
                               <button
                                 type="button"
                                 onClick={() => setTriggeredLog(log)}
-                                className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-amber-400 transition-colors border border-zinc-800 hover:border-amber-500/40 px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100"
+                                className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-amber-400 transition-colors border border-stone-800 hover:border-amber-500/40 px-2.5 py-1.5  opacity-0 group-hover:opacity-100"
                               >
                                 View rule
                               </button>
@@ -1170,14 +1199,14 @@ export default function DashboardPage() {
                                 <button
                                   type="button"
                                   onClick={() => reviewLog(log.id, "approved")}
-                                  className="text-[10px] uppercase tracking-wider text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded-lg"
+                                  className="text-[10px] uppercase tracking-wider text-emerald-400 border border-emerald-500/30 px-2 py-1 "
                                 >
                                   Approve
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => reviewLog(log.id, "rejected")}
-                                  className="text-[10px] uppercase tracking-wider text-red-400 border border-red-500/30 px-2 py-1 rounded-lg"
+                                  className="text-[10px] uppercase tracking-wider text-red-400 border border-red-500/30 px-2 py-1 "
                                 >
                                   Reject
                                 </button>
@@ -1235,7 +1264,7 @@ export default function DashboardPage() {
 
       {/* ── Save toast ───────────────────────────────── */}
       {saveToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm font-medium px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm font-medium px-4 py-3  shadow-2xl flex items-center gap-2">
           <span>✓</span>
           {saveToast}
         </div>

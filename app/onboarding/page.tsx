@@ -8,7 +8,7 @@ const STEPS = [
   {
     id: "workspace",
     title: "Create your workspace",
-    description: "Set up your first workspace to start protecting your agentic payments.",
+    description: "Set up your first workspace to start protecting autonomous actions.",
   },
   {
     id: "api-key",
@@ -18,7 +18,7 @@ const STEPS = [
   {
     id: "integration",
     title: "Integrate the SDK",
-    description: "Add IntentGuard to your agent with just a few lines of code.",
+    description: "Add Aurel to your agent with just a few lines of code.",
   },
   {
     id: "test",
@@ -72,11 +72,11 @@ export default function OnboardingPage() {
                 value={workspaceName}
                 onChange={(e) => setWorkspaceName(e.target.value)}
                 placeholder="e.g., Production"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+                className="aurel-field w-full px-4 py-3 placeholder-zinc-500"
                 autoFocus
               />
             </div>
-            <div className="bg-zinc-800/50 rounded-lg p-4">
+            <div className="border border-stone-800 bg-zinc-900/70 p-4">
               <h4 className="font-medium text-white mb-2 flex items-center gap-2">
                 <Lightbulb className="w-4 h-4 text-amber-400" />
                 Tip
@@ -98,34 +98,34 @@ export default function OnboardingPage() {
                 </p>
                 <button
                   onClick={handleCreateApiKey}
-                  className="w-full bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 rounded-lg transition-colors"
+                  className="aurel-button w-full py-3"
                 >
                   Generate API Key
                 </button>
               </>
             ) : (
               <div className="space-y-4">
-                <div className="bg-emerald-900/30 border border-emerald-500/50 rounded-lg p-4">
+                <div className="border border-emerald-500/50 bg-emerald-950/20 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     <span className="font-medium text-emerald-400">API Key Created</span>
                   </div>
                   <p className="text-sm text-zinc-400 mb-3">Copy this key now. You won&apos;t be able to see it again.</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-zinc-900 px-3 py-2 rounded text-sm font-mono text-emerald-300">
+                    <code className="flex-1 border border-stone-800 bg-black px-3 py-2 text-sm font-mono text-emerald-300">
                       {apiKey}
                     </code>
                     <button
                       onClick={() => navigator.clipboard.writeText(apiKey)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded text-sm transition-colors"
+                      className="border border-emerald-500/60 bg-emerald-950/30 px-3 py-2 text-sm text-emerald-300 transition-colors hover:border-emerald-300"
                     >
                       Copy
                     </button>
                   </div>
                 </div>
-                <div className="bg-zinc-800/50 rounded-lg p-4">
+                <div className="border border-stone-800 bg-zinc-900/70 p-4">
                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-violet-400" />
+                    <Lock className="w-4 h-4 text-stone-300" />
                     Security Note
                   </h4>
                   <p className="text-sm text-zinc-400">
@@ -141,14 +141,14 @@ export default function OnboardingPage() {
         return (
           <div className="space-y-6">
             <p className="text-zinc-400">
-              Add the IntentGuard SDK to your project and initialize it with your API key.
+              Add the Aurel SDK to your project and initialize it with your API key.
             </p>
-            <div className="bg-zinc-900 rounded-lg p-4 overflow-x-auto">
+            <div className="overflow-x-auto border border-stone-800 bg-black p-4">
               <pre className="text-sm text-zinc-300 font-mono">
                 <code>{`npm install intentguard`}</code>
               </pre>
             </div>
-            <div className="bg-zinc-900 rounded-lg p-4 overflow-x-auto">
+            <div className="overflow-x-auto border border-stone-800 bg-black p-4">
               <pre className="text-sm text-zinc-300 font-mono">
                 <code>{`import { createIntentGuardClient } from "intentguard/sdk";
 
@@ -158,9 +158,9 @@ const ig = createIntentGuardClient({
 });`}</code>
               </pre>
             </div>
-            <div className="bg-zinc-800/50 rounded-lg p-4">
+            <div className="border border-stone-800 bg-zinc-900/70 p-4">
               <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-violet-400" />
+                <BookOpen className="w-4 h-4 text-stone-300" />
                 Next Steps
               </h4>
               <p className="text-sm text-zinc-400">
@@ -176,7 +176,7 @@ const ig = createIntentGuardClient({
             <p className="text-zinc-400">
               Make your first verification call to ensure everything is working correctly.
             </p>
-            <div className="bg-zinc-900 rounded-lg p-4 overflow-x-auto">
+            <div className="overflow-x-auto border border-stone-800 bg-black p-4">
               <pre className="text-sm text-zinc-300 font-mono">
                 <code>{`const decision = await ig.verify({
   intent_id: "test_001",
@@ -190,13 +190,13 @@ const ig = createIntentGuardClient({
 console.log(decision);`}</code>
               </pre>
             </div>
-            <div className="bg-emerald-900/30 border border-emerald-500/50 rounded-lg p-4">
+            <div className="border border-emerald-500/50 bg-emerald-950/20 p-4">
               <div className="flex items-start gap-3">
                 <Sparkles className="w-6 h-6 text-emerald-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="font-medium text-emerald-400">You&apos;re all set!</h4>
                   <p className="text-sm text-zinc-400">
-                    Your workspace is configured and ready to protect your agentic payments.
+                    Your workspace is configured and ready to protect autonomous actions.
                   </p>
                 </div>
               </div>
@@ -210,7 +210,7 @@ console.log(decision);`}</code>
   };
 
   return (
-    <div className="min-h-screen bg-[#09090e] flex items-center justify-center p-4">
+    <div className="aurel-bg flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Progress */}
         <div className="mb-8">
@@ -218,18 +218,18 @@ console.log(decision);`}</code>
             {STEPS.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  className={`w-8 h-8 border flex items-center justify-center text-sm font-mono font-bold ${
                     index <= currentStep
-                      ? "bg-violet-600 text-white"
-                      : "bg-zinc-800 text-zinc-500"
+                      ? "border-stone-100 bg-stone-100 text-black"
+                      : "border-zinc-800 bg-zinc-900 text-zinc-500"
                   }`}
                 >
                   {index < currentStep ? "✓" : index + 1}
                 </div>
                 {index < STEPS.length - 1 && (
                   <div
-                    className={`w-16 h-1 mx-2 ${
-                      index < currentStep ? "bg-violet-600" : "bg-zinc-800"
+                    className={`w-16 h-px mx-2 ${
+                      index < currentStep ? "bg-stone-100" : "bg-zinc-800"
                     }`}
                   />
                 )}
@@ -238,7 +238,7 @@ console.log(decision);`}</code>
           </div>
           <div className="flex justify-between text-xs text-zinc-500">
             {STEPS.map((step) => (
-              <span key={step.id} className={currentStep === STEPS.indexOf(step) ? "text-violet-400" : ""}>
+              <span key={step.id} className={currentStep === STEPS.indexOf(step) ? "text-stone-200" : ""}>
                 {step.title}
               </span>
             ))}
@@ -246,18 +246,18 @@ console.log(decision);`}</code>
         </div>
 
         {/* Content */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-          <h2 className="text-2xl font-semibold text-white mb-2">{STEPS[currentStep].title}</h2>
-          <p className="text-zinc-400 mb-6">{STEPS[currentStep].description}</p>
+        <div className="aurel-panel p-8">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-stone-100 mb-2">{STEPS[currentStep].title}</h2>
+          <p className="text-stone-400 mb-6">{STEPS[currentStep].description}</p>
           
           {renderStep()}
 
           {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-zinc-800">
+          <div className="flex justify-between mt-8 pt-6 border-t border-stone-800">
             <button
               onClick={handleBack}
               disabled={currentStep === 0}
-              className="px-4 py-2 text-zinc-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-stone-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Back
             </button>
@@ -273,7 +273,7 @@ console.log(decision);`}</code>
                 (currentStep === 0 && !workspaceName.trim()) ||
                 (currentStep === 1 && !apiKeyCreated)
               }
-              className="bg-violet-600 hover:bg-violet-500 text-white font-medium px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="aurel-button px-6 py-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {currentStep === STEPS.length - 1 ? "Go to Dashboard" : "Next"}
             </button>

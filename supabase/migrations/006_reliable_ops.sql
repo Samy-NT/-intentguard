@@ -36,4 +36,5 @@ grant select, insert, update, delete
   to service_role;
 
 alter table webhook_jobs enable row level security;
+drop policy if exists "deny all anon" on webhook_jobs;
 create policy "deny all anon" on webhook_jobs for all to anon using (false);

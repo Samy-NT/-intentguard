@@ -2,8 +2,19 @@
 -- IntentGuard — enterprise controls: key roles and fail mode
 -- ============================================================
 
-create type api_key_role as enum ('admin', 'operator', 'viewer');
-create type semantic_fail_mode as enum ('allow', 'flag', 'block');
+do $$
+begin
+  create type api_key_role as enum ('admin', 'operator', 'viewer');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type semantic_fail_mode as enum ('allow', 'flag', 'block');
+exception
+  when duplicate_object then null;
+end $$;
 
 alter table api_keys
   add column if not exists role api_key_role not null default 'admin';

@@ -161,10 +161,10 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden">
-      <div className="px-6 py-4 border-b border-zinc-800 bg-zinc-900/80">
+    <div className="aurel-panel overflow-hidden">
+      <div className="px-6 py-4 border-b border-stone-800 bg-zinc-900/80">
         <div className="flex items-center gap-3">
-          <Icon className="w-5 h-5 text-zinc-400" />
+          <Icon className="w-5 h-5 text-stone-400" />
           <div>
             <h2 className="font-semibold text-white text-sm">{title}</h2>
             {description && <p className="text-xs text-zinc-500 mt-0.5">{description}</p>}
@@ -215,12 +215,12 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-        checked ? "bg-violet-600" : "bg-zinc-700"
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center  transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 ${
+        checked ? "bg-stone-100" : "bg-zinc-700"
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+        className={`inline-block h-4 w-4 transform  bg-white shadow transition-transform ${
           checked ? "translate-x-6" : "translate-x-1"
         }`}
       />
@@ -248,7 +248,7 @@ function NumInput({
   width?: string;
 }) {
   return (
-    <div className="inline-flex items-center bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden">
+    <div className="inline-flex items-center bg-zinc-800 border border-zinc-700  overflow-hidden">
       {prefix && (
         <span className="px-2.5 text-zinc-500 text-xs border-r border-zinc-700 select-none">
           {prefix}
@@ -291,7 +291,7 @@ function TextInput({
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className={`bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 transition-colors ${className}`}
+      className={`bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors ${className}`}
     />
   );
 }
@@ -311,7 +311,7 @@ function SelectInput<T extends string>({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
-      className={`bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 transition-colors ${className}`}
+      className={`bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors ${className}`}
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
@@ -346,7 +346,7 @@ function TagsInput({
           {tags.map((t) => (
             <span
               key={t}
-              className="inline-flex items-center gap-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs px-2.5 py-1 rounded-full"
+              className="inline-flex items-center gap-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs px-2.5 py-1 "
             >
               {t}
               <button
@@ -372,12 +372,12 @@ function TagsInput({
               add();
             }
           }}
-          className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 transition-colors"
+          className="flex-1 bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors"
         />
         <button
           type="button"
           onClick={add}
-          className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs px-3 py-2 rounded-lg transition-colors"
+          className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs px-3 py-2  transition-colors"
         >
           Add
         </button>
@@ -564,7 +564,7 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-3 text-zinc-500 text-sm">
-          <div className="w-4 h-4 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-zinc-700 border-t-zinc-400  animate-spin" />
           Loading settings…
         </div>
       </div>
@@ -572,33 +572,33 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#09090e]">
+    <div className="flex min-h-screen aurel-bg">
       <Sidebar />
       
       <main className="flex-1 ml-64">
         {/* ── Header ─────────────────────────────────────── */}
-        <header className="border-b border-zinc-800/60 bg-[#09090e]/80 backdrop-blur-sm sticky top-0 z-40">
+        <header className="border-b border-stone-800/60 bg-black/80 backdrop-blur-sm sticky top-0 z-40">
           <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2 group">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xs font-bold">
+                <div className="w-7 h-7  bg-stone-100 text-black flex items-center justify-center text-xs font-bold">
                   IG
                 </div>
                 <span className="font-bold text-lg tracking-tight group-hover:text-zinc-300 transition-colors">
-                  IntentGuard
+                  Aurel
                 </span>
               </Link>
               <div className="w-px h-5 bg-zinc-700" />
               <nav className="flex items-center gap-1">
                 <Link
                   href="/dashboard"
-                  className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800"
+                  className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5  hover:bg-stone-950"
                 >
                   Logs
                 </Link>
                 <Link
                   href="/dashboard/settings"
-                  className="text-sm text-white bg-zinc-800 px-3 py-1.5 rounded-lg"
+                  className="text-sm text-white bg-zinc-800 px-3 py-1.5 "
                 >
                   Settings
                 </Link>
@@ -614,12 +614,12 @@ export default function SettingsPage() {
                 }}
                 onBlur={() => fetchApiKeys()}
                 placeholder="API key"
-                className="w-44 bg-zinc-900 border border-zinc-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                className="w-44 bg-zinc-900 border border-stone-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-1.5  focus:outline-none focus:ring-2 focus:ring-stone-400/20"
               />
               <button
                 type="button"
                 onClick={resetDefaults}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800"
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5  hover:bg-stone-950"
               >
                 Reset to defaults
               </button>
@@ -627,10 +627,10 @@ export default function SettingsPage() {
               type="button"
               onClick={save}
               disabled={saving}
-              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 bg-stone-100 hover:bg-white disabled:bg-zinc-900 disabled:cursor-not-allowed text-black disabled:text-zinc-600 text-sm font-medium px-4 py-2  transition-colors"
             >
               {saving && (
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white  animate-spin" />
               )}
               {saving ? "Saving…" : "Save settings"}
             </button>
@@ -642,7 +642,7 @@ export default function SettingsPage() {
         {/* ── Toast ──────────────────────────────────────── */}
         {toast && (
           <div
-            className={`flex items-center gap-3 px-5 py-4 rounded-xl border text-sm font-medium transition-all ${
+            className={`flex items-center gap-3 px-5 py-4  border text-sm font-medium transition-all ${
               toast.type === "success"
                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                 : "bg-red-500/10 border-red-500/30 text-red-400"
@@ -662,7 +662,7 @@ export default function SettingsPage() {
 
         {/* ── Validation errors ──────────────────────────── */}
         {errors.length > 0 && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-5 py-4 space-y-1">
+          <div className="bg-red-500/10 border border-red-500/30  px-5 py-4 space-y-1">
             <p className="text-sm font-semibold text-red-400 mb-2">
               Please fix the following errors:
             </p>
@@ -684,7 +684,7 @@ export default function SettingsPage() {
               <input
                 value={newApiKeyName}
                 onChange={(e) => setNewApiKeyName(e.target.value)}
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                className="flex-1 bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20"
               />
               <SelectInput
                 value={newApiKeyRole}
@@ -699,13 +699,13 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={createApiKey}
-                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-200 text-sm px-4 py-2 rounded-lg transition-colors"
+                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-200 text-sm px-4 py-2  transition-colors"
               >
                 Create
               </button>
             </div>
             {createdApiKey && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <div className="mt-3  border border-amber-500/30 bg-amber-500/10 p-3">
                 <p className="text-xs text-amber-300 mb-2">
                   Copy this key now. It will not be shown again.
                 </p>
@@ -722,7 +722,7 @@ export default function SettingsPage() {
               {apiKeys.map((key) => (
                 <div
                   key={key.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2"
+                  className="flex items-center justify-between gap-3  border border-stone-800 bg-zinc-950/50 px-3 py-2"
                 >
                   <div className="min-w-0">
                     <p className="text-sm text-zinc-200 truncate">{key.name}</p>
@@ -735,7 +735,7 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => revokeApiKey(key.id)}
-                      className="text-xs text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg px-3 py-1.5"
+                      className="text-xs text-red-400 hover:text-red-300 border border-red-500/30  px-3 py-1.5"
                     >
                       Revoke
                     </button>
@@ -807,15 +807,15 @@ export default function SettingsPage() {
                   const map: Sensitivity[] = ["low", "medium", "high"];
                   set("semantic_sensitivity", map[Number(e.target.value)]);
                 }}
-                className="flex-1 accent-violet-500 h-2 cursor-pointer"
+                className="flex-1 accent-stone-200 h-2 cursor-pointer"
               />
               <div className="flex gap-1">
                 {(["low", "medium", "high"] as Sensitivity[]).map((v) => (
                   <span
                     key={v}
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${
+                    className={`text-xs px-2.5 py-1  font-medium capitalize ${
                       s.semantic_sensitivity === v
-                        ? "bg-violet-600 text-white"
+                        ? "bg-stone-100 text-black"
                         : "bg-zinc-800 text-zinc-500"
                     }`}
                   >
@@ -934,10 +934,10 @@ export default function SettingsPage() {
           >
             <div className="space-y-2">
               {s.known_vendors.length > 0 && (
-                <div className="border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="border border-stone-800  overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-zinc-800 bg-zinc-900/60">
+                      <tr className="border-b border-stone-800 bg-zinc-900/60">
                         <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium">
                           Vendor name
                         </th>
@@ -985,7 +985,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={addVendor}
-                className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors border border-dashed border-zinc-700 hover:border-zinc-600 rounded-lg px-4 py-2.5 w-full justify-center"
+                className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors border border-dashed border-zinc-700 hover:border-zinc-600  px-4 py-2.5 w-full justify-center"
               >
                 + Add vendor
               </button>
@@ -1019,10 +1019,10 @@ export default function SettingsPage() {
                 return (
                   <label
                     key={c.id}
-                    className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border cursor-pointer transition-colors text-sm select-none ${
+                    className={`flex items-center gap-2.5 px-3.5 py-2.5  border cursor-pointer transition-colors text-sm select-none ${
                       checked
-                        ? "bg-violet-600/15 border-violet-500/40 text-violet-300"
-                        : "bg-zinc-800/60 border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        ? "bg-stone-100 border-stone-500 text-black"
+                        : "bg-zinc-800/60 border-zinc-700 text-stone-400 hover:border-zinc-600"
                     }`}
                   >
                     <input
@@ -1036,7 +1036,7 @@ export default function SettingsPage() {
                             : s.allowed_categories.filter((x) => x !== c.id)
                         )
                       }
-                      className="accent-violet-500 w-3.5 h-3.5"
+                      className="accent-stone-200 w-3.5 h-3.5"
                     />
                     {c.label}
                   </label>
@@ -1058,10 +1058,10 @@ export default function SettingsPage() {
           >
             <div className="space-y-2">
               {s.per_agent_rules.length > 0 && (
-                <div className="border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="border border-stone-800  overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-zinc-800 bg-zinc-900/60">
+                      <tr className="border-b border-stone-800 bg-zinc-900/60">
                         <th className="text-left px-3 py-2.5 text-xs text-zinc-500 font-medium">
                           Agent ID
                         </th>
@@ -1141,7 +1141,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={addAgentRule}
-                className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors border border-dashed border-zinc-700 hover:border-zinc-600 rounded-lg px-4 py-2.5 w-full justify-center"
+                className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors border border-dashed border-zinc-700 hover:border-zinc-600  px-4 py-2.5 w-full justify-center"
               >
                 + Add agent rule
               </button>
@@ -1216,7 +1216,7 @@ export default function SettingsPage() {
             <TextInput
               value={s.webhook_url}
               onChange={(v) => set("webhook_url", v)}
-              placeholder="https://hooks.example.com/intentguard"
+              placeholder="https://hooks.example.com/Aurel"
               type="url"
               className="w-full"
             />
@@ -1232,12 +1232,12 @@ export default function SettingsPage() {
                 value={s.webhook_secret}
                 onChange={(e) => set("webhook_secret", e.target.value)}
                 placeholder="whsec_…"
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 font-mono transition-colors"
+                className="flex-1 bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 font-mono transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowSecret(!showSecret)}
-                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-400 text-xs px-3 py-2 rounded-lg transition-colors"
+                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-stone-400 text-xs px-3 py-2  transition-colors"
               >
                 {showSecret ? "Hide" : "Show"}
               </button>
@@ -1248,7 +1248,7 @@ export default function SettingsPage() {
             <TextInput
               value={s.siem_url}
               onChange={(v) => set("siem_url", v)}
-              placeholder="https://siem.example.com/ingest/intentguard"
+              placeholder="https://siem.example.com/ingest/Aurel"
               type="url"
               className="w-full"
             />
@@ -1264,12 +1264,12 @@ export default function SettingsPage() {
                 value={s.siem_secret}
                 onChange={(e) => set("siem_secret", e.target.value)}
                 placeholder="siemsec_..."
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 font-mono transition-colors"
+                className="flex-1 bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 font-mono transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowSecret(!showSecret)}
-                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-400 text-xs px-3 py-2 rounded-lg transition-colors"
+                className="bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-stone-400 text-xs px-3 py-2  transition-colors"
               >
                 {showSecret ? "Hide" : "Show"}
               </button>
@@ -1288,7 +1288,7 @@ export default function SettingsPage() {
                 step={5}
                 value={s.webhook_threshold}
                 onChange={(e) => set("webhook_threshold", Number(e.target.value))}
-                className="flex-1 accent-violet-500 h-2 cursor-pointer"
+                className="flex-1 accent-stone-200 h-2 cursor-pointer"
               />
               <span
                 className={`text-sm font-bold tabular-nums w-10 text-right ${
@@ -1331,13 +1331,13 @@ export default function SettingsPage() {
               ).map((item) => (
                 <label
                   key={item.key}
-                  className="flex items-start gap-3 px-4 py-3 bg-zinc-800/40 border border-zinc-800 rounded-xl cursor-pointer hover:bg-zinc-800/60 transition-colors"
+                  className="flex items-start gap-3 px-4 py-3 bg-zinc-800/40 border border-stone-800  cursor-pointer hover:bg-stone-950/60 transition-colors"
                 >
                   <input
                     type="checkbox"
                     checked={s[item.key]}
                     onChange={(e) => set(item.key, e.target.checked)}
-                    className="mt-0.5 accent-violet-500 w-4 h-4 flex-shrink-0"
+                    className="mt-0.5 accent-stone-200 w-4 h-4 flex-shrink-0"
                   />
                   <div>
                     <p className="text-sm font-medium text-zinc-200">{item.label}</p>
@@ -1410,14 +1410,14 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={resetDefaults}
-            className="text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="text-sm text-zinc-600 hover:text-stone-400 transition-colors"
           >
             Reset to defaults
           </button>
           <div className="flex gap-3">
             <Link
               href="/dashboard"
-              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-5 py-2.5 rounded-xl border border-zinc-800 hover:border-zinc-700"
+              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-5 py-2.5  border border-stone-800 hover:border-stone-600"
             >
               Cancel
             </Link>
@@ -1425,10 +1425,10 @@ export default function SettingsPage() {
               type="button"
               onClick={save}
               disabled={saving}
-              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:cursor-not-allowed text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
+              className="flex items-center gap-2 bg-stone-100 hover:bg-white disabled:bg-zinc-900 disabled:cursor-not-allowed text-black disabled:text-zinc-600 text-sm font-semibold px-6 py-2.5  transition-colors"
             >
               {saving && (
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white  animate-spin" />
               )}
               {saving ? "Saving…" : "Save settings"}
             </button>

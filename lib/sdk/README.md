@@ -23,6 +23,32 @@ if (result.decision === "block") throw new Error(result.reason);
 The SDK is intentionally transport-only: it works in custom agents, LangChain tools,
 CrewAI tasks, or any Node.js runtime with `fetch`.
 
+## Action security clients
+
+Aurel agent integrations use the shared action protocol in `lib/actions/protocol.ts` and the transport helpers exported from `lib/sdk`. Set `AUREL_FAIL_MODE=open` only when continuity is more important than strict outage blocking; privileged tool names still fail closed by default unless `AUREL_FAIL_OPEN_PRIVILEGED_ACTIONS=allow` is explicitly configured.
+
+## Audit verification
+
+```ts
+const audit = await intentguard.verifyStoredAuditLog({
+  intent_id: "pay_2026_0001",
+});
+
+if (!audit.valid) {
+  throw new Error("Audit trail verification failed");
+}
+```
+
+You can also verify an exported audit record:
+
+```ts
+const verification = await intentguard.verifyAuditRecord({
+  record: exportedLog,
+  audit_signature: exportedLog.audit_signature,
+  audit_signature_version: exportedLog.audit_signature_version,
+});
+```
+
 ## Adapters
 
 ```ts

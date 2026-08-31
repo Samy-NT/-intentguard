@@ -1,0 +1,31 @@
+{
+  "name": "aurel-codex",
+  "version": "0.1.0",
+  "description": "Aurel security guard for Codex MCP tool execution.",
+  "author": {
+    "name": "Aurel",
+    "url": "https://github.com/Samy-NT/intentguard"
+  },
+  "homepage": "https://github.com/Samy-NT/intentguard",
+  "repository": "https://github.com/Samy-NT/intentguard",
+  "license": "MIT",
+  "keywords": ["aurel", "security", "mcp", "codex", "agents"],
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Aurel Codex Guard",
+    "shortDescription": "Guard Codex MCP tools with Aurel.",
+    "longDescription": "Routes MCP tool calls through Aurel's pre-execution security policy before forwarding them to an upstream MCP server.",
+    "developerName": "Aurel",
+    "category": "Security",
+    "capabilities": ["MCP", "Security", "Telemetry"],
+    "websiteURL": "https://github.com/Samy-NT/intentguard",
+    "privacyPolicyURL": "https://openai.com/policies/row-privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/row-terms-of-use/",
+    "defaultPrompt": [
+      "Configure Aurel for this MCP server.",
+      "Check protected MCP tool telemetry.",
+      "Explain Aurel's Codex guard."
+    ],
+    "brandColor": "#111827"
+  }
+}

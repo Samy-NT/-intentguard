@@ -1,1 +1,865 @@
 @import "tailwindcss";
+
+/* Use a free 'tech' font (Orbitron) loaded via layout.tsx head link */
+
+@layer base {
+  body {
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      #050505;
+    background-size: 72px 72px;
+    color: #f5f5f4;
+  }
+}
+
+@layer components {
+  .aurel-bg {
+    min-height: 100vh;
+    overflow-x: hidden;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      #050505;
+    background-size: 72px 72px;
+    color: #f5f5f4;
+  }
+
+  .aurel-main {
+    min-height: 100vh;
+    overflow-x: hidden;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      #050505;
+    background-size: 72px 72px;
+    color: #f5f5f4;
+  }
+
+  .aurel-shell {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .aurel-shell {
+      padding-inline: 2rem;
+    }
+  }
+
+  .aurel-kicker {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.625rem;
+    line-height: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #78716c;
+  }
+
+  .aurel-title {
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    line-height: 0.98;
+    color: #f5f5f4;
+  }
+
+  .aurel-panel {
+    border: 1px solid #292524;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .aurel-panel-strong {
+    border: 1px solid #44403c;
+    background: rgba(0, 0, 0, 0.72);
+  }
+
+  .aurel-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #f5f5f4;
+    background: #f5f5f4;
+    color: #000;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+
+  .aurel-button:hover {
+    background: #fff;
+  }
+
+  .aurel-button-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #44403c;
+    background: rgba(0, 0, 0, 0.4);
+    color: #e7e5e4;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transition: border-color 150ms ease, color 150ms ease;
+  }
+
+  .aurel-button-ghost:hover {
+    border-color: #d6d3d1;
+    color: #fff;
+  }
+
+  .aurel-link {
+    color: #d6d3d1;
+    text-decoration-color: #57534e;
+    text-underline-offset: 4px;
+    transition: color 150ms ease, text-decoration-color 150ms ease;
+  }
+
+  .aurel-link:hover {
+    color: #fff;
+    text-decoration-color: #f5f5f4;
+  }
+
+  .aurel-field {
+    border: 1px solid #3f3f46;
+    background: #18181b;
+    color: #fff;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .aurel-field:focus {
+    outline: none;
+    border-color: #d6d3d1;
+    box-shadow: 0 0 0 1px rgba(214, 211, 209, 0.25);
+  }
+
+  .aurel-hero {
+    min-height: 760px;
+    background:
+      radial-gradient(circle at 74% 46%, rgba(245, 245, 244, 0.08), transparent 31rem),
+      radial-gradient(circle at 58% 54%, rgba(34, 197, 94, 0.045), transparent 25rem),
+      linear-gradient(90deg, rgba(5, 5, 5, 0.98) 0%, rgba(5, 5, 5, 0.84) 36%, rgba(5, 5, 5, 0.42) 67%, rgba(5, 5, 5, 0.78) 100%);
+    isolation: isolate;
+  }
+
+  .aurel-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.08) 42%, rgba(0, 0, 0, 0.2));
+  }
+
+  .aurel-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, #050505 0%, rgba(5, 5, 5, 0.94) 28%, rgba(5, 5, 5, 0.24) 54%, rgba(5, 5, 5, 0.48) 100%),
+      linear-gradient(180deg, rgba(5, 5, 5, 0.08) 0%, rgba(5, 5, 5, 0) 46%, #050505 100%);
+  }
+
+  .aurel-hero-depth {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .aurel-hero-depth-left {
+    inset-block: 0;
+    left: 0;
+    width: min(52rem, 62vw);
+    background: linear-gradient(90deg, #050505 0%, rgba(5, 5, 5, 0.94) 52%, transparent 100%);
+  }
+
+  .aurel-hero-depth-bottom {
+    inset-inline: 0;
+    bottom: 0;
+    height: 14rem;
+    background: linear-gradient(180deg, transparent, #050505 86%);
+  }
+
+  .aurel-hero-copy {
+    position: relative;
+    z-index: 5;
+  }
+
+  .aurel-hero-copy::before {
+    content: "";
+    position: absolute;
+    inset: -3rem -2rem -3rem -2rem;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(circle at 22% 44%, rgba(5, 5, 5, 0.88), rgba(5, 5, 5, 0.62) 38%, transparent 72%);
+  }
+
+  .aurel-hero-stage {
+    position: relative;
+    z-index: 4;
+    min-height: 560px;
+  }
+
+  .aurel-hero-stage-frame {
+    position: absolute;
+    inset: 6% 2% 6% 5%;
+    border: 1px solid rgba(120, 113, 108, 0.2);
+    opacity: 0.72;
+    mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 86%, transparent 100%);
+  }
+
+  .aurel-hero-stage-frame span {
+    position: absolute;
+    width: 4.4rem;
+    height: 4.4rem;
+    border-color: rgba(245, 245, 244, 0.42);
+  }
+
+  .aurel-hero-stage-frame span:nth-child(1) {
+    top: -1px;
+    left: -1px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+  }
+
+  .aurel-hero-stage-frame span:nth-child(2) {
+    top: -1px;
+    right: -1px;
+    border-top: 1px solid;
+    border-right: 1px solid;
+  }
+
+  .aurel-hero-stage-frame span:nth-child(3) {
+    right: -1px;
+    bottom: -1px;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+  }
+
+  .aurel-hero-stage-frame span:nth-child(4) {
+    bottom: -1px;
+    left: -1px;
+    border-bottom: 1px solid;
+    border-left: 1px solid;
+  }
+
+  .aurel-hero-verdict-grid,
+  .aurel-hero-telemetry {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+  }
+
+  .aurel-hero-verdict-grid {
+    position: absolute;
+    right: clamp(0.5rem, 4vw, 3rem);
+    bottom: clamp(2rem, 6vw, 4rem);
+    display: grid;
+    width: min(30rem, 86vw);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid rgba(68, 64, 60, 0.82);
+    background: rgba(5, 5, 5, 0.68);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.34);
+  }
+
+  .aurel-hero-verdict-grid div {
+    min-width: 0;
+    padding: 0.9rem 0.82rem;
+  }
+
+  .aurel-hero-verdict-grid div + div {
+    border-left: 1px solid rgba(68, 64, 60, 0.82);
+  }
+
+  .aurel-hero-verdict-grid span,
+  .aurel-hero-telemetry span {
+    display: block;
+    margin-bottom: 0.32rem;
+    overflow-wrap: anywhere;
+    font-size: 0.58rem;
+    line-height: 1.1;
+    color: #78716c;
+  }
+
+  .aurel-hero-verdict-grid strong,
+  .aurel-hero-telemetry strong {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    color: #d6d3d1;
+  }
+
+  .aurel-hero-verdict-grid div:nth-child(1) strong,
+  .aurel-hero-telemetry div:nth-child(1) strong,
+  .aurel-hero-telemetry div:nth-child(3) strong {
+    color: #34d399;
+  }
+
+  .aurel-hero-verdict-grid div:nth-child(2) strong {
+    color: #f59e0b;
+  }
+
+  .aurel-hero-verdict-grid div:nth-child(3) strong,
+  .aurel-hero-telemetry div:nth-child(2) strong {
+    color: #f87171;
+  }
+
+  .aurel-hero-scene,
+  .aurel-hero-fallback,
+  .aurel-hero-webgl {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .aurel-hero-scene {
+    z-index: 0;
+  }
+
+  .aurel-hero-webgl {
+    opacity: 0;
+    transition: opacity 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .aurel-hero-webgl.is-ready {
+    opacity: 1;
+  }
+
+  .aurel-hero-scene.has-webgl .aurel-hero-fallback {
+    opacity: 0;
+  }
+
+  .aurel-hero-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .aurel-hero-fallback {
+    z-index: 0;
+    opacity: 0.86;
+    transition: opacity 700ms ease;
+  }
+
+  .aurel-hero-fallback svg {
+    position: absolute;
+    right: -7vw;
+    top: 50%;
+    width: min(74rem, 86vw);
+    height: min(46rem, 72vh);
+    transform: translateY(-48%);
+    overflow: visible;
+    filter: drop-shadow(0 0 44px rgba(214, 211, 209, 0.08));
+  }
+
+  .aurel-fallback-lines line {
+    stroke: #78716c;
+    stroke-width: 0.24;
+    stroke-opacity: 0.38;
+    animation: aurel-line-breathe 5.8s ease-in-out infinite;
+  }
+
+  .aurel-fallback-nodes circle {
+    fill: #d6d3d1;
+    fill-opacity: 0.68;
+    animation: aurel-node-breathe 4.8s ease-in-out infinite;
+  }
+
+  .aurel-fallback-core {
+    opacity: 0.84;
+  }
+
+  .aurel-fallback-boundary {
+    fill: none;
+    stroke: #d6d3d1;
+    stroke-width: 0.25;
+    stroke-opacity: 0.18;
+    transform-origin: 55px 52px;
+    animation: aurel-boundary-turn 14s linear infinite;
+  }
+
+  .aurel-fallback-boundary-alt {
+    stroke: #34d399;
+    stroke-opacity: 0.14;
+    animation-duration: 19s;
+    animation-direction: reverse;
+  }
+
+  .aurel-fallback-threat {
+    fill: none;
+    stroke: #f87171;
+    stroke-width: 0.8;
+    stroke-linecap: round;
+    stroke-dasharray: 0.12 1;
+    filter: drop-shadow(0 0 7px rgba(248, 113, 113, 0.55));
+    animation: aurel-threat-route 7.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
+  .aurel-fallback-containment {
+    fill: none;
+    stroke: #f59e0b;
+    stroke-width: 0.55;
+    stroke-opacity: 0.64;
+    transform-origin: 76px 63px;
+    animation: aurel-containment-pulse 7.2s ease-in-out infinite;
+  }
+
+  .aurel-hero-telemetry {
+    position: absolute;
+    right: clamp(1.2rem, 5vw, 6rem);
+    top: clamp(7rem, 15vh, 12rem);
+    z-index: 4;
+    display: grid;
+    gap: 0.5rem;
+    min-width: 11rem;
+  }
+
+  .aurel-hero-telemetry div {
+    border-left: 1px solid rgba(120, 113, 108, 0.62);
+    background: linear-gradient(90deg, rgba(5, 5, 5, 0.68), rgba(5, 5, 5, 0.16));
+    padding: 0.55rem 0.8rem;
+    backdrop-filter: blur(12px);
+  }
+
+  .aurel-grid-drift {
+    animation: aurel-grid-drift 38s linear infinite;
+  }
+
+  .aurel-reveal {
+    animation: aurel-reveal 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .aurel-reveal-section {
+    animation: aurel-reveal 820ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 28%;
+  }
+
+  .aurel-delay-1 {
+    animation-delay: 90ms;
+  }
+
+  .aurel-delay-2 {
+    animation-delay: 180ms;
+  }
+
+  .aurel-delay-3 {
+    animation-delay: 270ms;
+  }
+
+  .aurel-delay-4 {
+    animation-delay: 360ms;
+  }
+
+  .aurel-delay-5 {
+    animation-delay: 450ms;
+  }
+
+  .aurel-slit {
+    transform-origin: 50% 100%;
+    animation: aurel-slit 1200ms cubic-bezier(0.16, 1, 0.3, 1) both, aurel-slit-idle 9s ease-in-out 1400ms infinite;
+  }
+
+  .aurel-slit-slow {
+    animation-duration: 1500ms, 12s;
+  }
+
+  .aurel-checkpoint {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .aurel-checkpoint::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, transparent 0%, rgba(245, 245, 244, 0.12) 48%, rgba(245, 245, 244, 0.18) 50%, transparent 54%),
+      repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 7px);
+    mix-blend-mode: screen;
+    opacity: 0.42;
+    animation: aurel-scan 4.8s linear infinite;
+  }
+
+  .aurel-checkpoint::after {
+    content: "";
+    position: absolute;
+    left: 1.5rem;
+    right: 1.5rem;
+    bottom: 4.5rem;
+    z-index: 2;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(245, 245, 244, 0.8), transparent);
+    opacity: 0.5;
+    animation: aurel-blink 2.8s steps(2, end) infinite;
+  }
+
+  .aurel-state {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .aurel-state::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-110%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+    animation: aurel-state-sweep 5.5s ease-in-out infinite;
+  }
+
+  .aurel-state:nth-child(2)::before {
+    animation-delay: 420ms;
+  }
+
+  .aurel-state:nth-child(3)::before {
+    animation-delay: 840ms;
+  }
+
+  .aurel-lock-blink {
+    animation: aurel-blink 2.2s steps(2, end) infinite;
+  }
+
+  .aurel-action {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .aurel-action::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    transform: translateX(-105%);
+    background: rgba(255, 255, 255, 0.18);
+    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .aurel-action:hover::before {
+    transform: translateX(0);
+  }
+
+  .aurel-action-light::before {
+    background: rgba(0, 0, 0, 0.12);
+  }
+
+  .aurel-surface-line {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .aurel-surface-line::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 100%;
+    top: 0;
+    z-index: 1;
+    height: 1px;
+    background: #f5f5f4;
+    transition: right 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .aurel-surface-line:hover::before {
+    right: 0;
+  }
+
+  .aurel-code-scan {
+    position: relative;
+  }
+
+  .aurel-code-scan::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent 0%, rgba(245, 245, 244, 0.08) 50%, transparent 55%);
+    opacity: 0.28;
+    animation: aurel-scan 6.5s linear infinite;
+  }
+}
+
+@keyframes aurel-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes aurel-scan {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes aurel-slit {
+  from {
+    opacity: 0;
+    transform: translateY(34px) skewX(-7deg) scaleY(0.82);
+  }
+  to {
+    opacity: var(--aurel-slit-opacity, 0.1);
+    transform: translateY(0) skewX(0) scaleY(1);
+  }
+}
+
+@keyframes aurel-slit-idle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes aurel-grid-drift {
+  from {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 72px 0, 0 72px, 0 0;
+  }
+}
+
+@keyframes aurel-blink {
+  0%, 72%, 100% {
+    opacity: 0.35;
+  }
+  73%, 84% {
+    opacity: 1;
+  }
+}
+
+@keyframes aurel-state-sweep {
+  0%, 62% {
+    transform: translateX(-110%);
+  }
+  76%, 100% {
+    transform: translateX(110%);
+  }
+}
+
+@keyframes aurel-line-breathe {
+  0%, 100% {
+    stroke-opacity: 0.24;
+  }
+  50% {
+    stroke-opacity: 0.58;
+  }
+}
+
+@keyframes aurel-node-breathe {
+  0%, 100% {
+    fill-opacity: 0.46;
+    transform: scale(0.94);
+  }
+  50% {
+    fill-opacity: 0.92;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes aurel-boundary-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aurel-threat-route {
+  0%, 36% {
+    stroke-dashoffset: 1;
+    stroke-opacity: 0;
+  }
+  48%, 67% {
+    stroke-opacity: 0.86;
+  }
+  72%, 100% {
+    stroke-dashoffset: 0.28;
+    stroke-opacity: 0;
+  }
+}
+
+@keyframes aurel-containment-pulse {
+  0%, 58% {
+    opacity: 0;
+    transform: scale(0.68);
+  }
+  68%, 88% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@media (max-width: 1023px) {
+  .aurel-hero {
+    min-height: 840px;
+    background:
+      radial-gradient(circle at 62% 68%, rgba(245, 245, 244, 0.08), transparent 23rem),
+      radial-gradient(circle at 48% 72%, rgba(34, 197, 94, 0.04), transparent 18rem),
+      #050505;
+  }
+
+  .aurel-hero::after {
+    background:
+      linear-gradient(180deg, #050505 0%, rgba(5, 5, 5, 0.9) 33%, rgba(5, 5, 5, 0.18) 62%, #050505 100%),
+      linear-gradient(90deg, rgba(5, 5, 5, 0.9), rgba(5, 5, 5, 0.24), rgba(5, 5, 5, 0.76));
+  }
+
+  .aurel-hero-depth-left {
+    width: 100%;
+    background: linear-gradient(180deg, #050505 0%, rgba(5, 5, 5, 0.84) 38%, transparent 68%);
+  }
+
+  .aurel-hero-stage {
+    min-height: 340px;
+  }
+
+  .aurel-hero-stage-frame {
+    inset: 0 0 1.25rem;
+    opacity: 0.42;
+  }
+
+  .aurel-hero-fallback svg {
+    right: 50%;
+    top: auto;
+    bottom: 1rem;
+    width: min(46rem, 132vw);
+    height: 27rem;
+    transform: translateX(54%);
+  }
+
+  .aurel-hero-telemetry {
+    top: auto;
+    right: 1rem;
+    bottom: 8.7rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: calc(100% - 2rem);
+    min-width: 0;
+  }
+
+  .aurel-hero-telemetry div {
+    padding: 0.55rem 0.5rem;
+  }
+
+  .aurel-hero-verdict-grid {
+    right: 0;
+    bottom: 1.25rem;
+    width: 100%;
+  }
+}
+
+/* Hero heading: use Orbitron (free Google Font) and slightly reduce size */
+.aurel-hero h1 {
+  font-family: 'Orbitron', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+  /* slightly smaller than the previous tailwind sizes; responsive via clamp */
+  font-size: clamp(2.8rem, 9.6vw, 5.2rem) !important;
+  line-height: 0.92 !important;
+}
+
+@media (max-width: 640px) {
+  .aurel-hero {
+    min-height: 880px;
+  }
+
+  .aurel-hero h1 {
+      font-size: clamp(2.4rem, 12vw, 3.8rem) !important;
+  }
+
+    /* Hero copy: use Orbitron and slightly reduce paragraph size */
+    .aurel-hero-copy,
+    .aurel-hero p {
+      font-family: 'Orbitron', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+    }
+
+    .aurel-hero p {
+      font-size: clamp(0.95rem, 1.9vw, 1.05rem) !important;
+      line-height: 1.05 !important;
+      color: #cfcfcf;
+    }
+
+  .aurel-hero-stage {
+    min-height: 310px;
+    margin-top: -0.5rem;
+  }
+
+  .aurel-hero-verdict-grid span,
+  .aurel-hero-telemetry span {
+    font-size: 0.5rem;
+  }
+
+  .aurel-hero-verdict-grid strong,
+  .aurel-hero-telemetry strong {
+    font-size: 0.58rem;
+  }
+
+  .aurel-hero-telemetry {
+    bottom: 8.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurel-grid-drift,
+  .aurel-reveal,
+  .aurel-reveal-section,
+  .aurel-slit,
+  .aurel-checkpoint::before,
+  .aurel-checkpoint::after,
+  .aurel-state::before,
+  .aurel-lock-blink,
+  .aurel-code-scan::after,
+  .aurel-fallback-lines line,
+  .aurel-fallback-nodes circle,
+  .aurel-fallback-boundary,
+  .aurel-fallback-threat,
+  .aurel-fallback-containment {
+    animation: none !important;
+  }
+
+  .aurel-reveal,
+  .aurel-reveal-section {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  .aurel-slit {
+    transform: none;
+    filter: none;
+  }
+}

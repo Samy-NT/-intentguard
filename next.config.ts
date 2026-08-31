@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const projectRoot = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   // Prevent webpack from bundling Supabase — its browser/node export conditions
@@ -6,7 +10,7 @@ const nextConfig: NextConfig = {
   // Let Node.js load these at runtime instead.
   serverExternalPackages: ["@supabase/supabase-js", "@supabase/ssr"],
   turbopack: {
-    root: process.cwd(),
+    root: projectRoot,
   },
   async headers() {
     return [
