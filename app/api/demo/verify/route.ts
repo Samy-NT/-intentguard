@@ -12,8 +12,6 @@ function demoJson(data: unknown, status = 200) {
   });
 }
 
-assertEnv();
-
 const DemoPayloadSchema = z.object({
   agentId: z.string().min(1).max(100),
   amount: z.number().positive(),
@@ -344,6 +342,8 @@ function evaluateVelocity(context: string, agentId: string, amount: number): Vel
 
 // ── POST /api/demo/verify ──────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  assertEnv();
+
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     req.headers.get("x-real-ip") ??

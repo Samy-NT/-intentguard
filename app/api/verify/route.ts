@@ -15,7 +15,6 @@ import { checkWorkspaceRateLimit } from "@/lib/ratelimit";
 import { AUDIT_SIGNATURE_VERSION, signAuditDecision } from "@/lib/audit";
 import type { RuleDecision, VerifyResponse } from "@/types";
 
-assertEnv();
 const MAX_VERIFY_BODY_BYTES = 32_000;
 
 // ─── Validation schema ────────────────────────────────────────────────────────
@@ -34,6 +33,8 @@ const PaymentIntentSchema = z.object({
 // ─── POST /api/verify ─────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  assertEnv();
+
   // 1. Authenticate
   const auth = await authenticateRequest(req);
   if (auth instanceof Response) return auth;
