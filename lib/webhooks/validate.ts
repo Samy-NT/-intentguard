@@ -58,6 +58,7 @@ function isBlockedAddress(address: string): boolean {
 export interface WebhookUrlValidation {
   ok: boolean;
   normalizedUrl?: string;
+  resolvedAddresses?: string[];
   error?: string;
 }
 
@@ -86,6 +87,8 @@ export async function validateWebhookUrl(rawUrl: string): Promise<WebhookUrlVali
     if (isBlockedAddress(hostname)) {
       return { ok: false, error: "Webhook URL must not target private or local addresses" };
     }
+    url.hash = "";
+    return { ok: true, normalizedUrl: url.toString(), resolvedAddresses: [hostname] };
   } else {
     let addresses;
     try {
@@ -97,8 +100,12 @@ export async function validateWebhookUrl(rawUrl: string): Promise<WebhookUrlVali
     if (!addresses.length || addresses.some(({ address }) => isBlockedAddress(address))) {
       return { ok: false, error: "Webhook URL resolves to a private or local address" };
     }
-  }
 
-  url.hash = "";
-  return { ok: true, normalizedUrl: url.toString() };
+    url.hash = "";
+    return {
+      ok: true,
+      normalizedUrl: url.toString(),
+      resolvedAddresses: addresses.map(({ address }) => address),
+    };
+  }
 }

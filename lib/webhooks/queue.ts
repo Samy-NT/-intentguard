@@ -21,11 +21,19 @@ interface WebhookJobRow {
   payload: WebhookPayload;
   attempts: number;
   max_attempts: number;
+  locked_at: string | null;
+  locked_by: string | null;
 }
 
 function retryDelaySeconds(attempts: number): number {
   return Math.min(3600, 30 * 2 ** Math.max(0, attempts - 1));
 }
+
+function generateWorkerId(): string {
+  return `worker-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function enqueueWebhookJob(
   db: SupabaseClient,
@@ -56,7 +64,7 @@ async function markDeliveryAudit(
 ) {
   const { error } = await db.from("webhook_deliveries").insert({
     workspace_id: job.workspace_id,
-    intent_id: job.intent_id ?? job.id,
+    intent_id: job.intent_id ?? "system-job",
     event: job.event,
     status: result.status,
     http_status: result.http_status ?? null,
@@ -69,21 +77,53 @@ export async function processWebhookQueue(
   db: SupabaseClient,
   limit = 25
 ): Promise<{ processed: number; delivered: number; failed: number; blocked: number }> {
+  const workerId = generateWorkerId();
+  const lockedAt = new Date().toISOString();
+
+  // Select and lock pending jobs
   const { data, error } = await db
     .from("webhook_jobs")
     .select("id, workspace_id, intent_id, event, target_url, secret, payload, attempts, max_attempts")
     .eq("status", "pending")
     .lte("next_attempt_at", new Date().toISOString())
+    .or(`locked_at.is.null,locked_at.lt.${new Date(Date.now() - LOCK_TIMEOUT_MS).toISOString()}`)
     .order("created_at", { ascending: true })
     .limit(limit);
 
   if (error) throw new Error(`Failed to load webhook jobs: ${error.message}`);
 
+  // Attempt to lock all selected jobs
+  const jobIds = (data ?? []).map((j) => j.id);
+  if (jobIds.length === 0) {
+    return { processed: 0, delivered: 0, failed: 0, blocked: 0 };
+  }
+
+  const { error: lockError } = await db
+    .from("webhook_jobs")
+    .update({ locked_at: lockedAt, locked_by: workerId })
+    .in("id", jobIds)
+    .eq("status", "pending")
+    .or(`locked_at.is.null,locked_at.lt.${new Date(Date.now() - LOCK_TIMEOUT_MS).toISOString()}`);
+
+  if (lockError) {
+    console.error("[webhook-queue] Failed to lock jobs:", lockError.message);
+    return { processed: 0, delivered: 0, failed: 0, blocked: 0 };
+  }
+
+  // Re-fetch only the jobs we successfully locked
+  const { data: lockedJobs, error: refetchError } = await db
+    .from("webhook_jobs")
+    .select("id, workspace_id, intent_id, event, target_url, secret, payload, attempts, max_attempts")
+    .in("id", jobIds)
+    .eq("locked_by", workerId);
+
+  if (refetchError) throw new Error(`Failed to refetch locked jobs: ${refetchError.message}`);
+
   let delivered = 0;
   let failed = 0;
   let blocked = 0;
 
-  for (const job of (data ?? []) as WebhookJobRow[]) {
+  for (const job of (lockedJobs ?? []) as WebhookJobRow[]) {
     const result = await fireWebhook(job.payload, {
       url: job.target_url,
       secret: job.secret ?? undefined,
@@ -103,6 +143,8 @@ export async function processWebhookQueue(
           last_error: null,
           delivered_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          locked_at: null,
+          locked_by: null,
         })
         .eq("id", job.id);
       continue;
@@ -124,9 +166,11 @@ export async function processWebhookQueue(
         last_error: result.error ?? (result.http_status ? `HTTP ${result.http_status}` : result.status),
         next_attempt_at: terminal ? new Date().toISOString() : nextAttemptAt,
         updated_at: new Date().toISOString(),
+        locked_at: null,
+        locked_by: null,
       })
       .eq("id", job.id);
   }
 
-  return { processed: data?.length ?? 0, delivered, failed, blocked };
+  return { processed: lockedJobs?.length ?? 0, delivered, failed, blocked };
 }

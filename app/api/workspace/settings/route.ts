@@ -30,8 +30,8 @@ const SettingsPatchSchema = z
       (typeof body.webhook_threshold === "number" &&
         Number.isInteger(body.webhook_threshold) &&
         body.webhook_threshold >= 0 &&
-        body.webhook_threshold <= 101),
-    { message: "webhook_threshold must be an integer from 0 to 101" }
+        body.webhook_threshold <= 100),
+    { message: "webhook_threshold must be an integer from 0 to 100" }
   )
   .refine((body) => optionalStringOrNull(body, "siem_url"), {
     message: "siem_url must be a string or null",
@@ -154,9 +154,9 @@ export async function PATCH(req: NextRequest) {
       typeof webhook_threshold !== "number" ||
       !Number.isInteger(webhook_threshold) ||
       webhook_threshold < 0 ||
-      webhook_threshold > 101
+      webhook_threshold > 100
     ) {
-      return Response.json({ error: "webhook_threshold must be an integer from 0 to 101" }, { status: 422 });
+      return Response.json({ error: "webhook_threshold must be an integer from 0 to 100" }, { status: 422 });
     }
     update.webhook_threshold = webhook_threshold;
   }

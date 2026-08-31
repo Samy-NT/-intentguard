@@ -46,16 +46,16 @@ export default function SupportPage() {
 
   const FAQ_ITEMS = [
     {
-      question: "How do I integrate IntentGuard with my agent?",
-      answer: "Install the SDK, initialize it with your API key, and call the verify method before each payment. See our documentation for detailed examples.",
+      question: "How do I integrate Aurel with my agent?",
+      answer: "Install the SDK, initialize it with your API key, and call the verify method before each protected action. Payments are the first supported example in the docs.",
     },
     {
       question: "What happens when semantic analysis is unavailable?",
-      answer: "You can configure a fail mode in your workspace settings: allow (proceed), flag (require review), or block (stop the transaction).",
+      answer: "You can configure a fail mode in your workspace settings: allow (proceed), flag (require review), or block (stop the action).",
     },
     {
       question: "Can I customize the verification rules?",
-      answer: "Yes, you can configure amount thresholds, velocity limits, allowlists/denylists, and semantic sensitivity in your workspace settings.",
+      answer: "Yes, you can configure action thresholds, velocity limits, allowlists/denylists, and semantic sensitivity in your workspace settings.",
     },
     {
       question: "How are API keys secured?",
@@ -63,38 +63,39 @@ export default function SupportPage() {
     },
     {
       question: "What data is sent to Claude for semantic analysis?",
-      answer: "Only the transaction amount, currency, recipient, and agent context. No sensitive payment details or personal information is sent.",
+      answer: "Only the action details needed for verification, plus agent context. For payment examples, this includes amount, currency, and recipient, not sensitive payment credentials.",
     },
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#09090e]">
+    <div className="flex min-h-screen aurel-bg">
       <Sidebar />
       
       <main className="flex-1 ml-64 p-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-white mb-2">Support</h1>
-          <p className="text-zinc-400 mb-8">Get help with IntentGuard</p>
+          <div className="aurel-kicker mb-3">Support / operations desk</div>
+          <h1 className="aurel-title text-4xl mb-2">Support</h1>
+          <p className="text-stone-400 mb-8">Get help putting Aurel before autonomous action execution.</p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Contact Form */}
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-              <h2 className="text-xl font-semibold text-white mb-6">Contact Us</h2>
+            <div className="aurel-panel p-8">
+              <h2 className="text-xl font-black uppercase tracking-tight text-stone-100 mb-6">Contact us</h2>
               
               {submitted ? (
-                <div className="bg-emerald-900/30 border border-emerald-500/50 rounded-lg p-4">
+                <div className="border border-emerald-500/50 bg-emerald-950/20 p-4">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0" />
                     <div>
                       <h3 className="font-semibold text-emerald-400">Message Sent</h3>
-                      <p className="text-sm text-zinc-400">We&apos;ll get back to you within 24 hours.</p>
+                      <p className="text-sm text-stone-400">We&apos;ll get back to you within 24 hours.</p>
                     </div>
                   </div>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-zinc-400 mb-2">
+                    <label htmlFor="name" className="block text-sm font-medium text-stone-400 mb-2">
                       Name
                     </label>
                     <input
@@ -103,13 +104,13 @@ export default function SupportPage() {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+                      className="aurel-field w-full px-4 py-3 placeholder-zinc-500"
                       placeholder="Your name"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-zinc-400 mb-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-stone-400 mb-2">
                       Email
                     </label>
                     <input
@@ -118,13 +119,13 @@ export default function SupportPage() {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+                      className="aurel-field w-full px-4 py-3 placeholder-zinc-500"
                       placeholder="you@example.com"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="subject" className="block text-sm font-medium text-zinc-400 mb-2">
+                    <label htmlFor="subject" className="block text-sm font-medium text-stone-400 mb-2">
                       Subject
                     </label>
                     <select
@@ -132,7 +133,7 @@ export default function SupportPage() {
                       required
                       value={formData.subject}
                       onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+                      className="aurel-field w-full px-4 py-3"
                     >
                       <option value="">Select a topic</option>
                       <option value="integration">Integration Help</option>
@@ -144,7 +145,7 @@ export default function SupportPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-zinc-400 mb-2">
+                    <label htmlFor="message" className="block text-sm font-medium text-stone-400 mb-2">
                       Message
                     </label>
                     <textarea
@@ -153,7 +154,7 @@ export default function SupportPage() {
                       rows={5}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors resize-none"
+                      className="aurel-field w-full resize-none px-4 py-3 placeholder-zinc-500"
                       placeholder="Describe your issue or question..."
                     />
                   </div>
@@ -161,7 +162,7 @@ export default function SupportPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="aurel-button w-full py-3 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSubmitting ? "Sending..." : "Send Message"}
                   </button>
@@ -171,42 +172,42 @@ export default function SupportPage() {
 
             {/* FAQ */}
             <div className="space-y-6">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-                <h2 className="text-xl font-semibold text-white mb-6">Frequently Asked Questions</h2>
+              <div className="aurel-panel p-8">
+                <h2 className="text-xl font-black uppercase tracking-tight text-stone-100 mb-6">Frequently asked questions</h2>
                 <div className="space-y-4">
                   {FAQ_ITEMS.map((item, index) => (
                     <details key={index} className="group">
-                      <summary className="flex items-center justify-between cursor-pointer text-zinc-300 hover:text-white transition-colors">
+                      <summary className="flex cursor-pointer items-center justify-between text-stone-300 transition-colors hover:text-white">
                         <span className="font-medium">{item.question}</span>
                         <span className="text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
                       </summary>
-                      <p className="mt-2 text-sm text-zinc-400 leading-relaxed">{item.answer}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-stone-400">{item.answer}</p>
                     </details>
                   ))}
                 </div>
               </div>
 
               {/* Quick Links */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-                <h2 className="text-xl font-semibold text-white mb-4">Quick Links</h2>
+              <div className="aurel-panel p-8">
+                <h2 className="text-xl font-black uppercase tracking-tight text-stone-100 mb-4">Quick links</h2>
                 <div className="space-y-3">
-                  <Link href="/docs" className="flex items-center gap-3 text-zinc-400 hover:text-white transition-colors">
+                  <Link href="/docs" className="flex items-center gap-3 text-stone-400 transition-colors hover:text-white">
                     <BookOpen className="w-4 h-4 flex-shrink-0" />
                     <span>Documentation</span>
                   </Link>
-                  <Link href="/dashboard/settings" className="flex items-center gap-3 text-zinc-400 hover:text-white transition-colors">
+                  <Link href="/dashboard/settings" className="flex items-center gap-3 text-stone-400 transition-colors hover:text-white">
                     <Settings className="w-4 h-4 flex-shrink-0" />
                     <span>Workspace Settings</span>
                   </Link>
-                  <Link href="/dashboard/api-keys" className="flex items-center gap-3 text-zinc-400 hover:text-white transition-colors">
+                  <Link href="/dashboard/api-keys" className="flex items-center gap-3 text-stone-400 transition-colors hover:text-white">
                     <Key className="w-4 h-4 flex-shrink-0" />
                     <span>API Keys</span>
                   </Link>
                   <a
-                    href="https://github.com/Samy-NT/intentguard"
+                    href="https://github.com/Samy-NT/Aurel"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-zinc-400 hover:text-white transition-colors"
+                    className="flex items-center gap-3 text-stone-400 transition-colors hover:text-white"
                   >
                     <Github className="w-4 h-4 flex-shrink-0" />
                     <span>GitHub Repository</span>

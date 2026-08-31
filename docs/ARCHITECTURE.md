@@ -17,8 +17,8 @@ Aurel (anciennement IntentGuard) est un **intent firewall pour les paiements age
 
 Aurel se construit en 3 phases, du plus simple au plus ambitieux :
 
-### Phase 1 — MVP : API simple (en cours, déjà démarré sur le repo)
-Une API légère qui filtre les décisions de paiement des agents via les 3 layers actuels (règles déterministes → comportemental → sémantique). Objectif : avoir un produit fonctionnel rapidement pour valider le concept avec les premiers partenaires.
+### Phase 1 — MVP : API simple (en cours, socle fonctionnel)
+Une API légère qui filtre les décisions de paiement des agents via les 3 layers actuels (règles déterministes → comportemental/velocity → sémantique). Le repo contient déjà le socle exploitable : endpoint versionné, dashboard, clés API par workspace/rôle, politiques configurables, webhooks durables, exports d'audit, rétention et tests automatisés.
 
 ### Phase 2 — Le "Mandate" (vérification avancée, inspiré de Google AP2)
 Introduction d'un objet **"mandate"** : une preuve vérifiable que le prompt donné à l'agent correspond bien à l'achat qu'il s'apprête à effectuer. Concrètement, ça permet de répondre à la question *"cet agent a-t-il vraiment reçu l'instruction de faire cet achat précis, ou dévie-t-il de sa mission ?"*.
@@ -59,13 +59,17 @@ Une fois le mandate fiabilisé, transformer Aurel en label de confiance pour l'�
 
 ## Base de données (Supabase)
 
---- à compléter
+- `workspaces` : configuration workspace, policy JSONB, endpoints webhook/SIEM, fail mode sémantique
+- `api_keys` : clés scoppées workspace, rôles `admin` / `operator` / `viewer`, révocation et suivi `last_used_at`
+- `rules` : règles déterministes managées par workspace
+- `verify_logs` : audit trail, source velocity, review queue, signature HMAC des décisions
+- `webhook_jobs` / `webhook_deliveries` : file durable et historique de livraison
 
 ## Auth & Billing (PR #2 —)
 
-- Authentification centralisée
-- Infrastructure de billing
-- **Statut :** conflits de merge non résolus sur PR #2 — à traiter en priorité avant tout déploiement
+- Authentification API par `x-api-key`, hash côté serveur, rôles par clé
+- UI login/signup présente, mais à clarifier côté provider/session avant go-to-market
+- Infrastructure de billing esquissée (`/billing`), à connecter à un provider réel
 
 *(Adam : peux-tu détailler ici le système d'auth choisi — JWT / sessions / OAuth — et le provider de billing utilisé ?)*
 
@@ -81,17 +85,24 @@ Une fois le mandate fiabilisé, transformer Aurel en label de confiance pour l'�
 
 ## Audit Trail
 
-- Chaque décision de paiement génère une entrée signée cryptographiquement
+- Chaque décision de paiement génère une entrée persistée dans `verify_logs`
+- Les nouvelles entrées portent une signature HMAC-SHA256 canonique (`audit-v1-hmac-sha256`) sur les champs critiques du verdict
+- Secret recommandé : `AUDIT_SIGNING_SECRET` ; fallback actuel : `INTENTGUARD_SECRET`, puis `SUPABASE_SERVICE_ROLE_KEY`
 - Objectif : traçabilité et non-répudiation (utile pour la conformité et la confiance des partenaires fintech)
-- *(à compléter : algorithme de signature, format de stockage, durée de rétention)*
+- Les exports JSON/CSV incluent `audit_signature` et `audit_signature_version`
+- Vérification disponible via `POST /api/v1/audit/verify` pour les exports et `GET /api/v1/workspace/audit-verify` pour les logs stockés
+- À compléter : rotation des secrets, backfill des anciens logs
 
 ---
 
 ## Décisions en cours / points à trancher
 
-- [ ] Résoudre les conflits de merge
-- [ ] Appliquer les migrations Supabase 004–007
+- [x] Résoudre les conflits de merge
+- [ ] Appliquer les migrations Supabase 004–008
 - [ ] Documenter précisément les 7 vecteurs d'attaque du Layer 3
+- [x] Ajouter un endpoint de vérification externe des signatures d'audit
+- [x] Ajouter une action UI de vérification d'un log signé
+- [ ] Backfiller les signatures sur les logs historiques
 - [ ] Étudier en détail le protocole AP2 de Google pour cadrer le design du "mandate"
 - [ ] Définir le format et le mécanisme de signature du mandate (Phase 2)
 - [ ] Définir les critères de certification "Aurel Certified" (Phase 3)

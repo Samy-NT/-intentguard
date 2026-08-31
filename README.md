@@ -1,6 +1,6 @@
 # Aurel
 
-Runtime intent firewall for agentic payments. Sits between your agent and the payment rail — blocking injected instructions, semantic anomalies, and policy violations before a single transaction executes.
+The intent firewall for autonomous actions. Aurel secures the intent before a decision passes, blocking injected instructions, semantic anomalies, mission drift, suspicious provenance, and policy violations before an agent executes high-consequence work.
 
 [![CI](https://github.com/Samy-NT/intentguard/actions/workflows/ci.yml/badge.svg)](https://github.com/Samy-NT/intentguard/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -9,15 +9,16 @@ Runtime intent firewall for agentic payments. Sits between your agent and the pa
 
 ## How it works
 
-Every payment intent passes through three sequential layers before a decision is returned:
+Every protected action intent passes through three sequential layers before a decision is returned:
 
-- **Layer 1 — Deterministic rules.** Amount caps, denylist matching, currency restrictions. Sub-millisecond. No external calls.
-- **Layer 2 — Velocity checks.** Per-agent rate limits and cumulative spend windows. Stateful, backed by Redis.
+- **Layer 1 — Deterministic rules.** Action caps, denylist matching, route restrictions. Sub-millisecond. No external calls.
+- **Layer 2 — Velocity checks.** Per-agent rate limits and cumulative exposure windows. Stateful, backed by Redis.
 - **Layer 3 — Semantic analysis (Claude).** Detects prompt injection, semantic anomalies, social engineering (authority spoofing, urgency manipulation, confidentiality requests), mission drift, and suspicious instruction provenance.
 
 Layers are additive. The final decision (`allow` / `flag` / `block`) reflects the worst outcome across all three.
 Workspace settings are synchronized into managed runtime rules, so dashboard limits, denylists, allowlists, and velocity controls are enforced by the API.
 Webhook escalations are queued durably and retried by cron; audit exports, SIEM exports, and log retention are also handled by scheduled jobs.
+Each persisted verification is signed with a canonical HMAC-SHA256 audit signature so exported logs can be checked for tampering.
 
 ---
 
@@ -59,12 +60,13 @@ curl -X POST https://your-deployment.vercel.app/api/v1/verify \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
-    "intent_id": "pay_2026_0001",
+    "intent_id": "act_2026_0001",
     "agent_id": "ag_expense_manager_v1",
     "amount": 250,
     "currency": "USD",
     "recipient": "billing@stripe.com",
-    "agent_context": "Renewing annual Stripe subscription INV-2026-0892 within approved vendor list."
+    "agent_context": "Renewing annual Stripe subscription INV-2026-0892 within approved vendor list.",
+    "metadata": { "action_type": "payment" }
   }'
 ```
 
@@ -72,12 +74,14 @@ curl -X POST https://your-deployment.vercel.app/api/v1/verify \
 
 ```json
 {
-  "intent_id": "pay_2026_0001",
+  "intent_id": "act_2026_0001",
   "decision": "allow",
   "reason": "All verification layers passed",
   "risk_score": 5,
   "triggered_rule": null,
-  "version": "v1"
+  "evaluated_at": "2026-07-11T12:00:00.000Z",
+  "audit_signature": "8f1c...",
+  "audit_signature_version": "audit-v1-hmac-sha256"
 }
 ```
 
@@ -97,6 +101,37 @@ All workspace endpoints require `x-api-key` and are scoped to the key's workspac
 - `GET /api/workspace/webhook-jobs` — inspect pending/retried webhook jobs
 - `PATCH /api/workspace/webhook-jobs` — retry a failed webhook job
 - `GET /api/workspace/audit-export?format=json|csv` — export audit logs
+- `GET /api/workspace/audit-verify?intent_id=...` — verify a stored audit log signature
+
+### Audit verification
+
+`POST /api/v1/audit/verify` verifies an exported audit record against its HMAC signature.
+
+```json
+{
+  "record": {
+    "workspace_id": "00000000-0000-0000-0000-000000000001",
+    "intent_id": "pay_2026_0001",
+    "agent_id": "ag_expense_manager_v1",
+    "recipient": "billing@stripe.com",
+    "merchant_id": null,
+    "amount": 250,
+    "currency": "USD",
+    "decision": "allow",
+    "triggered_rule": null,
+    "risk_score": 5,
+    "evaluated_at": "2026-07-11T12:00:00.000Z"
+  },
+  "audit_signature": "8f1c...",
+  "audit_signature_version": "audit-v1-hmac-sha256"
+}
+```
+
+Response:
+
+```json
+{ "valid": true, "audit_signature_version": "audit-v1-hmac-sha256" }
+```
 
 API keys have roles:
 
@@ -115,16 +150,33 @@ const ig = createIntentGuardClient({
 });
 
 const decision = await ig.verify({
-  intent_id: "pay_2026_0001",
+  intent_id: "act_2026_0001",
   agent_id: "ag_expense_manager_v1",
   amount: 250,
   currency: "USD",
   recipient: "billing@stripe.com",
   agent_context: "Renewing approved SaaS subscription.",
+  metadata: { action_type: "payment" },
 });
 ```
 
 Adapters are available from `intentguard/sdk/adapters` for LangChain-style and CrewAI-style tool wrappers.
+
+---
+
+## Agent Security Benchmark 2026
+
+Open, reproducible benchmark of agent guardrails: 17 attacks + 14 benign controls across
+LangGraph, CrewAI, OpenAI Agents SDK, MCP and browser agents, mapped to the OWASP Top 10
+for Agentic Applications (2026). Every metric — attack success rate, false positives,
+friction, coverage, latency, auditability — is generated by an open harness:
+
+```bash
+npm run benchmark      # regenerates benchmark/results/latest.json
+```
+
+Public leaderboard: [`/benchmark`](https://aurel.io/benchmark) — methodology in
+[benchmark/README.md](benchmark/README.md).
 
 ---
 
@@ -171,6 +223,7 @@ Tests cover: deterministic rule evaluation, velocity detection, semantic pattern
 | `UPSTASH_REDIS_REST_URL` | No | Upstash Redis REST URL for demo rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis REST token |
 | `CRON_SECRET` | Recommended | Bearer token for manual cron invocations |
+| `AUDIT_SIGNING_SECRET` | Recommended | HMAC key used to sign persisted audit decisions. Falls back to `INTENTGUARD_SECRET`, then service-role key. |
 
 `/api/v1/verify`, `/api/logs`, and `/api/workspace/settings` require an `x-api-key` header. Settings and logs are scoped to the workspace associated with that API key.
 

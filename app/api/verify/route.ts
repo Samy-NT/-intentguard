@@ -12,6 +12,7 @@ import { withTimeout } from "@/lib/timeout";
 import { assertEnv } from "@/lib/env";
 import { recordLayerMetric, captureError } from "@/lib/monitoring";
 import { checkWorkspaceRateLimit } from "@/lib/ratelimit";
+import { AUDIT_SIGNATURE_VERSION, signAuditDecision } from "@/lib/audit";
 import type { RuleDecision, VerifyResponse } from "@/types";
 
 assertEnv();
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
   // 3. Idempotency — return cached decision for known intent_id
   const { data: existing } = await db
     .from("verify_logs")
-    .select("decision, risk_score, triggered_rule")
+    .select("decision, risk_score, triggered_rule, audit_signature, audit_signature_version, created_at")
     .eq("workspace_id", intent.workspace_id)
     .eq("intent_id", intent.intent_id)
     .maybeSingle();
@@ -76,8 +77,10 @@ export async function POST(req: NextRequest) {
       reason: "Returned from cache (idempotent)",
       triggered_rule: existing.triggered_rule ?? undefined,
       risk_score: existing.risk_score,
-      evaluated_at: new Date().toISOString(),
+      evaluated_at: existing.created_at ?? new Date().toISOString(),
       intent_id: intent.intent_id,
+      audit_signature: existing.audit_signature ?? undefined,
+      audit_signature_version: existing.audit_signature_version ?? undefined,
     };
     return json(response);
   }
@@ -155,13 +158,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 7. Webhook escalation — durable queue processed by /api/cron/webhooks
-  console.log("[verify] pre-webhook —", {
-    decision: finalDecision,
-    risk_score: finalRiskScore,
-    webhook_configured: !!wsConfig.webhook,
-    webhook_threshold: wsConfig.webhook?.threshold ?? null,
-  });
-  if (wsConfig.webhook && shouldEscalate(finalDecision, finalRiskScore, wsConfig.webhook)) {
+  if (wsConfig.webhook && shouldEscalate(finalDecision, finalRiskScore, wsConfig.webhook, intent.amount)) {
     const queued = await enqueueWebhookJob(db, {
       workspace_id: intent.workspace_id,
       intent_id: intent.intent_id,
@@ -186,23 +183,42 @@ export async function POST(req: NextRequest) {
     if (queued.error) console.error("[webhook] Failed to queue delivery:", queued.error);
   }
 
-  // 8. Persist audit log before returning so idempotency and velocity remain reliable.
+  // 8. Persist signed audit log before returning so idempotency and velocity remain reliable.
+  const evaluatedAt = new Date().toISOString();
+  const auditRecord = {
+    workspace_id: intent.workspace_id,
+    intent_id: intent.intent_id,
+    agent_id: intent.agent_id,
+    recipient: intent.recipient,
+    merchant_id: intent.merchant_id ?? null,
+    amount: intent.amount,
+    currency: intent.currency,
+    decision: finalDecision,
+    triggered_rule: engineResult.triggered_rule ?? null,
+    risk_score: finalRiskScore,
+    evaluated_at: evaluatedAt,
+  };
+  const auditSignature = signAuditDecision(auditRecord);
+
   try {
     const { error } = await withTimeout(
       Promise.resolve(
         db.from("verify_logs").insert({
-          intent_id: intent.intent_id,
-          workspace_id: intent.workspace_id,
-          agent_id: intent.agent_id,
-          recipient: intent.recipient,
-          merchant_id: intent.merchant_id ?? null,
+          intent_id: auditRecord.intent_id,
+          workspace_id: auditRecord.workspace_id,
+          agent_id: auditRecord.agent_id,
+          recipient: auditRecord.recipient,
+          merchant_id: auditRecord.merchant_id,
           amount: intent.amount,
-          currency: intent.currency,
+          currency: auditRecord.currency,
           agent_context: intent.agent_context ?? null,
-          decision: finalDecision,
-          triggered_rule: engineResult.triggered_rule,
-          risk_score: finalRiskScore,
+          decision: auditRecord.decision,
+          triggered_rule: auditRecord.triggered_rule,
+          risk_score: auditRecord.risk_score,
           review_status: finalDecision === "flag" ? "pending" : "not_required",
+          audit_signature: auditSignature,
+          audit_signature_version: AUDIT_SIGNATURE_VERSION,
+          created_at: evaluatedAt,
         })
       ) as Promise<{ error: { message: string } | null }>,
       5_000,
@@ -225,8 +241,10 @@ export async function POST(req: NextRequest) {
     reason: finalReason,
     triggered_rule: engineResult.triggered_rule ?? undefined,
     risk_score: finalRiskScore,
-    evaluated_at: new Date().toISOString(),
+    evaluated_at: evaluatedAt,
     intent_id: intent.intent_id,
+    audit_signature: auditSignature,
+    audit_signature_version: AUDIT_SIGNATURE_VERSION,
   };
 
   return json(response);

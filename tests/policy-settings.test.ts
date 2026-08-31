@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluatePolicy } from "@/lib/policies/evaluate";
 import { buildManagedRules, normalizeWorkspacePolicy } from "@/lib/settings-policy";
+import { shouldEscalate } from "@/lib/webhooks/notify";
 import type { PaymentIntent } from "@/types";
 
 function intent(overrides: Partial<PaymentIntent> = {}): PaymentIntent {
@@ -52,6 +53,46 @@ describe("settings-backed policy evaluation", () => {
     expect(result?.reason).toContain("per-agent cap");
   });
 
+  it("only enforces allowed categories when strict category mode is enabled", () => {
+    const relaxed = evaluatePolicy(intent(), {
+      strict_categories: false,
+      allowed_categories: ["saas"],
+    });
+    expect(relaxed).toBeNull();
+
+    const strict = evaluatePolicy(intent(), {
+      strict_categories: true,
+      allowed_categories: ["saas"],
+    });
+    expect(strict?.decision).toBe("block");
+  });
+
+  it("honors webhook escalation toggles and mandatory amount threshold", () => {
+    expect(
+      shouldEscalate("flag", 30, {
+        url: "https://example.com/hook",
+        threshold: 70,
+        escalate_on_flag: false,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldEscalate("block", 30, {
+        url: "https://example.com/hook",
+        threshold: 70,
+        escalate_on_block: true,
+      })
+    ).toBe(true);
+
+    expect(
+      shouldEscalate("allow", 10, {
+        url: "https://example.com/hook",
+        threshold: 70,
+        escalate_above_amount: 1_000,
+      }, 1_500)
+    ).toBe(true);
+  });
+
   it("normalizes settings into active managed rules", () => {
     const policy = normalizeWorkspacePolicy({
       max_amount_usd: 5_000,
@@ -68,5 +109,55 @@ describe("settings-backed policy evaluation", () => {
     const rules = buildManagedRules(policy);
     expect(rules.filter((rule) => rule.is_active)).toHaveLength(7);
     expect(rules.map((rule) => rule.config.managed_by)).toEqual(Array(7).fill("settings"));
+  });
+
+  it("blocks a SaaS renewal when the vendor-specific cap is exceeded", () => {
+    const result = evaluatePolicy(
+      intent({ recipient: "billing@stripe.com", merchant_id: "stripe", amount: 12_000 }),
+      {
+        known_vendors: [{ name: "stripe", max_amount: 5_000 }],
+        allowed_categories: ["saas"],
+        strict_categories: true,
+      }
+    );
+
+    expect(result?.decision).toBe("block");
+    expect(result?.reason).toContain("vendor cap");
+  });
+
+  it("blocks autonomous payouts outside the approved category list", () => {
+    const result = evaluatePolicy(
+      intent({
+        recipient: "creator@example.com",
+        amount: 850,
+        metadata: { category: "creator_payout" },
+      }),
+      {
+        allowed_categories: ["saas", "cloud", "contractor"],
+        strict_categories: true,
+      }
+    );
+
+    expect(result?.decision).toBe("block");
+    expect(result?.reason).toContain("not permitted");
+  });
+
+  it("enforces per-category caps for procurement agents", () => {
+    const result = evaluatePolicy(
+      intent({
+        agent_id: "ag_procurement",
+        amount: 4_500,
+        metadata: { category: "hardware" },
+      }),
+      {
+        max_amount_by_category: {
+          hardware: 2_000,
+          software: 10_000,
+        },
+      }
+    );
+
+    expect(result?.decision).toBe("block");
+    expect(result?.reason).toContain("hardware");
   });
 });

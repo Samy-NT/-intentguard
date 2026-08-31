@@ -1,3 +1,4 @@
+import { request } from "node:https";
 import type { RuleDecision } from "@/types";
 import { validateWebhookUrl } from "@/lib/webhooks/validate";
 
@@ -7,6 +8,10 @@ export interface WebhookConfig {
   url: string;
   secret?: string;
   threshold: number; // risk_score >= threshold → escalate
+  escalate_on_block?: boolean;
+  escalate_on_flag?: boolean;
+  escalate_on_risk_score?: boolean;
+  escalate_above_amount?: number;
 }
 
 export interface EscalationPayload {
@@ -39,12 +44,16 @@ export interface WebhookDeliveryResult {
 export function shouldEscalate(
   decision: RuleDecision,
   riskScore: number,
-  config: WebhookConfig
+  config: WebhookConfig,
+  amount = 0
 ): boolean {
-  const escalate = decision === "flag" || riskScore >= config.threshold;
-  console.log(
-    `[webhook] shouldEscalate — decision=${decision} risk=${riskScore} threshold=${config.threshold} → ${escalate}`
-  );
+  const escalate =
+    (decision === "block" && config.escalate_on_block !== false) ||
+    (decision === "flag" && config.escalate_on_flag !== false) ||
+    (config.escalate_on_risk_score !== false && riskScore >= config.threshold) ||
+    (typeof config.escalate_above_amount === "number" &&
+      config.escalate_above_amount > 0 &&
+      amount >= config.escalate_above_amount);
   return escalate;
 }
 
@@ -59,53 +68,81 @@ export async function fireWebhook(
   config: WebhookConfig
 ): Promise<WebhookDeliveryResult> {
   const validation = await validateWebhookUrl(config.url);
-  if (!validation.ok || !validation.normalizedUrl) {
+  if (!validation.ok || !validation.normalizedUrl || !validation.resolvedAddresses?.length) {
     console.error(`[webhook] blocked unsafe URL: ${validation.error}`);
     return { status: "blocked", error: validation.error };
   }
 
-  console.log("[webhook] firing", {
-    event: typeof payload.event === "string" ? payload.event : "unknown",
-    intent_id: typeof payload.intent_id === "string" ? payload.intent_id : null,
-    has_secret: !!config.secret,
-  });
-
   const body = JSON.stringify(payload);
+  const event = typeof payload.event === "string" ? payload.event : "unknown";
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-IntentGuard-Event": "payment.escalation",
+    "X-IntentGuard-Event": event,
   };
 
   if (config.secret) {
     headers["X-IntentGuard-Signature"] = `sha256=${await hmacSha256(config.secret, body)}`;
   }
 
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), 5_000);
-
   try {
-    const res = await fetch(validation.normalizedUrl, {
-      method: "POST",
-      headers,
-      body,
-      signal: abort.signal,
-    });
+    const res = await postJsonWithoutRedirects(validation.normalizedUrl, headers, body, validation.resolvedAddresses);
 
-    if (res.ok) {
-      console.log(`[webhook] delivered — HTTP ${res.status}`);
-      return { status: "delivered", http_status: res.status };
+    if (res.statusCode >= 300 && res.statusCode < 400) {
+      return { status: "blocked", http_status: res.statusCode, error: "Webhook redirects are not allowed" };
+    }
+
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return { status: "delivered", http_status: res.statusCode };
     } else {
-      console.error(`[webhook] delivery failed — HTTP ${res.status}`);
-      return { status: "failed", http_status: res.status };
+      console.error(`[webhook] delivery failed — HTTP ${res.statusCode}`);
+      return { status: "failed", http_status: res.statusCode };
     }
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);
     console.error(`[webhook] delivery error: ${reason}`);
     return { status: "failed", error: reason };
-  } finally {
-    clearTimeout(timer);
   }
+}
+
+function postJsonWithoutRedirects(
+  rawUrl: string,
+  headers: Record<string, string>,
+  body: string,
+  resolvedAddresses: string[]
+): Promise<{ statusCode: number }> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(rawUrl);
+    let nextAddress = 0;
+    const req = request(
+      {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: `${url.pathname}${url.search}`,
+        method: "POST",
+        headers: {
+          ...headers,
+          "Content-Length": Buffer.byteLength(body).toString(),
+        },
+        lookup: (_hostname, _options, callback) => {
+          const address = resolvedAddresses[nextAddress % resolvedAddresses.length];
+          nextAddress++;
+          callback(null, address, address.includes(":") ? 6 : 4);
+        },
+        timeout: 5_000,
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () => resolve({ statusCode: res.statusCode ?? 0 }));
+      }
+    );
+
+    req.on("timeout", () => req.destroy(new Error("Webhook request timed out")));
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 // ─── HMAC-SHA256 via Web Crypto (available in Next.js Edge & Node runtimes) ──

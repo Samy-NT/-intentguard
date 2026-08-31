@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Shield, Brain, Zap } from "lucide-react";
+import { Activity, FileCheck2, Shield } from "lucide-react";
+import { HeroSceneFallback } from "@/app/components/hero/HeroSceneFallback";
 import type {
   RulesLayerResult,
   VelocityLayerResult,
@@ -13,26 +15,31 @@ import type {
   SemanticSignals,
 } from "@/app/api/demo/verify/route";
 
+const HeroScene = dynamic(() => import("@/app/components/hero/HeroScene"), {
+  ssr: false,
+  loading: () => <HeroSceneFallback />,
+});
+
 // ── Landing data ───────────────────────────────────────────────────────────────
 
 const FEATURES = [
   {
     icon: Shield,
-    title: "Deterministic Rules",
+    title: "Policy checkpoint",
     description:
-      "Amount thresholds, allowlists & denylists, and velocity limits per agent or workspace — evaluated in microseconds with zero false negatives.",
+      "Action limits, approved targets, blocked routes, and per-agent controls are evaluated before an autonomous decision can leave the system.",
   },
   {
-    icon: Brain,
-    title: "Semantic Detection",
+    icon: Activity,
+    title: "Behavioral pressure",
     description:
-      "Claude AI reads the agent's reasoning and checks it against the actual transaction. Catches prompt injections and reasoning anomalies that rigid rules miss.",
+      "Velocity windows expose unusual bursts, retries, domain drift, and actions that no longer match the agent's normal operating lane.",
   },
   {
-    icon: Zap,
-    title: "SDK Plug-and-Play",
+    icon: FileCheck2,
+    title: "Signed decision record",
     description:
-      "One API call to secure any agentic payment flow. Works with LangChain, CrewAI, AutoGPT, and fully custom agents in minutes.",
+      "Every verdict produces an audit entry with the payload hash, policy version, execution node, and decision signature.",
   },
 ];
 
@@ -40,34 +47,35 @@ const CODE_REQUEST = `POST /api/verify
 x-api-key: ig_your_api_key
 
 {
-  "intent_id": "pay_abc123",
+  "intent_id": "act_abc123",
   "agent_id": "agent_gpt4",
   "amount": 4800.00,
   "currency": "USD",
   "recipient": "vendor@acme.com",
   "agent_context": "User approved a $4,800 invoice
-    payment to Acme Corp for Q2 services."
+    payment to Acme Corp for Q2 services.",
+  "metadata": { "action_type": "payment" }
 }`;
 
 const CODE_RESPONSE = `{
   "decision": "allow",
-  "reason": "All rules passed",
+  "reason": "Intent verified before execution",
   "risk_score": 8,
   "evaluated_at": "2026-06-22T14:30:00Z",
-  "intent_id": "pay_abc123"
+  "intent_id": "act_abc123"
 }`;
 
 const PRICING = [
   {
     tier: "Starter",
     badge: "Private Beta",
-    badgeColor: "bg-violet-500/15 text-violet-400",
+    badgeColor: "border-stone-500/40 text-stone-300",
     price: "Free",
     sub: "during beta",
     cta: "Request access",
     ctaHref: "#contact",
     ctaStyle:
-      "bg-violet-600 hover:bg-violet-500 text-white",
+      "bg-stone-100 hover:bg-white text-black",
     features: [
       "1,000 verifications / month",
       "3 defense layers",
@@ -78,13 +86,13 @@ const PRICING = [
   {
     tier: "Growth",
     badge: "Coming soon",
-    badgeColor: "bg-zinc-800 text-zinc-500",
+    badgeColor: "border-zinc-800 text-zinc-500",
     price: "$149",
     sub: "/ month",
     cta: "Join waitlist",
     ctaHref: "#contact",
     ctaStyle:
-      "border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white",
+      "border border-zinc-700 hover:border-stone-400 text-zinc-300 hover:text-white",
     features: [
       "100,000 verifications / month",
       "3 defense layers",
@@ -96,13 +104,13 @@ const PRICING = [
   {
     tier: "Enterprise",
     badge: "Custom",
-    badgeColor: "bg-zinc-800 text-zinc-500",
+    badgeColor: "border-zinc-800 text-zinc-500",
     price: "Custom",
     sub: "pricing",
     cta: "Contact sales",
     ctaHref: "#contact",
     ctaStyle:
-      "border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white",
+      "border border-zinc-700 hover:border-stone-400 text-zinc-300 hover:text-white",
     features: [
       "Unlimited verifications",
       "Dedicated instance",
@@ -256,7 +264,7 @@ function MonoInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-3 py-2 focus:outline-none focus:border-indigo-500/50 placeholder-zinc-700 transition-colors ${className}`}
+      className={`w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-3 py-2 focus:outline-none focus:border-stone-400/60 placeholder-zinc-700 transition-colors ${className}`}
     />
   );
 }
@@ -264,7 +272,7 @@ function MonoInput({
 function ConsoleDot({ status }: { status: "idle" | "running" | "pass" | "triggered" | "skip" }) {
   const cfg = {
     idle: { color: "text-zinc-700", label: "IDLE" },
-    running: { color: "text-indigo-400", label: "RUNNING" },
+    running: { color: "text-stone-300", label: "RUNNING" },
     pass: { color: "text-emerald-500", label: "PASS" },
     triggered: { color: "text-red-400", label: "TRIGGERED" },
     skip: { color: "text-zinc-700", label: "SKIPPED" },
@@ -290,14 +298,14 @@ function JsonBlock({ data }: { data: Record<string, unknown> }) {
             const [, val, comma] = vm;
             let vc: React.ReactNode;
             if (val.startsWith('"')) vc = <span className="text-emerald-600/80">{val}</span>;
-            else if (val === "true") vc = <span className="text-indigo-400/80">true</span>;
+            else if (val === "true") vc = <span className="text-stone-300/80">true</span>;
             else if (val === "false") vc = <span className="text-zinc-500">false</span>;
             else if (val === "null") vc = <span className="text-zinc-600">null</span>;
             else vc = <span className="text-amber-500/70">{val}</span>;
             return (
               <div key={i}>
                 {indent}
-                <span className="text-violet-400/60">{key}</span>
+                <span className="text-stone-400/70">{key}</span>
                 <span className="text-zinc-600">{colon} </span>
                 {vc}
                 <span className="text-zinc-600">{comma}</span>
@@ -307,7 +315,7 @@ function JsonBlock({ data }: { data: Record<string, unknown> }) {
           return (
             <div key={i}>
               {indent}
-              <span className="text-violet-400/60">{key}</span>
+              <span className="text-stone-400/70">{key}</span>
               <span className="text-zinc-600">{colon}{rest}</span>
             </div>
           );
@@ -380,7 +388,7 @@ function RulesLayer({
             {layer.checks.map((check, i) => (
               <div key={i}>
                 <div className="flex items-baseline gap-2 text-[11px] font-mono">
-                  <span className="text-indigo-700 flex-shrink-0">›</span>
+                  <span className="text-stone-700 flex-shrink-0">›</span>
                   <span className="text-zinc-700 flex-shrink-0 w-14 text-right text-[10px] tabular-nums">
                     [{fmtUs(check.exec_us)}]
                   </span>
@@ -482,7 +490,7 @@ function VelocityLayer({
               return (
                 <div key={i}>
                   <div className="flex items-baseline gap-2 text-[11px] font-mono">
-                    <span className="text-indigo-700 flex-shrink-0">›</span>
+                    <span className="text-stone-700 flex-shrink-0">›</span>
                     <span className="text-zinc-700 flex-shrink-0 w-14 text-right text-[10px] tabular-nums">
                       [{fmtUs(check.exec_us)}]
                     </span>
@@ -634,7 +642,7 @@ function SemanticLayer({
                 </div>
                 <div className="text-[11px] text-zinc-400 font-mono leading-relaxed whitespace-pre-wrap">
                   {displayText}
-                  {isStreaming && <span className="text-indigo-400 animate-pulse">▌</span>}
+                  {isStreaming && <span className="text-stone-300 animate-pulse">▌</span>}
                 </div>
               </div>
             </div>
@@ -681,7 +689,7 @@ function GhostedPipeline() {
             {GHOST_RULES.map((r) => (
               <div key={r.id}>
                 <div className="flex items-baseline gap-2 text-[11px] font-mono">
-                  <span className="text-indigo-700">›</span>
+                  <span className="text-stone-700">›</span>
                   <span className="text-zinc-700 w-14 text-right text-[10px]">[{r.time}]</span>
                   <span className={`flex-1 ${r.pass === null ? "text-zinc-700" : "text-zinc-400"}`}>{r.id}</span>
                   <span className={`text-[10px] tracking-wider ${r.pass === null ? "text-zinc-700" : "text-emerald-500"}`}>
@@ -705,7 +713,7 @@ function GhostedPipeline() {
             {GHOST_VELOCITY.map((r) => (
               <div key={r.id}>
                 <div className="flex items-baseline gap-2 text-[11px] font-mono">
-                  <span className="text-indigo-700">›</span>
+                  <span className="text-stone-700">›</span>
                   <span className="text-zinc-700 w-14 text-right text-[10px]">[{r.time}]</span>
                   <span className="flex-1 text-zinc-400">{r.id}</span>
                   <span className="text-[10px] tracking-wider text-emerald-500">PASS</span>
@@ -826,7 +834,7 @@ function GhostedDecision({ computing }: { computing: boolean }) {
       <div className="absolute inset-0 flex items-center justify-center">
         {computing ? (
           <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500">
-            <span className="w-3 h-3 border border-zinc-700 border-t-indigo-500 rounded-full animate-spin" />
+            <span className="w-3 h-3 border border-zinc-700 border-t-stone-300 rounded-full animate-spin" />
             Computing verdict…
           </div>
         ) : (
@@ -900,7 +908,7 @@ function PipelineColHeader({
 }) {
   const cfg = {
     ready:      { dot: "bg-emerald-600",   text: "text-emerald-700",  label: "READY",      pulse: false },
-    processing: { dot: "bg-indigo-400",    text: "text-indigo-400",   label: "PROCESSING", pulse: true  },
+    processing: { dot: "bg-stone-300",    text: "text-stone-300",   label: "PROCESSING", pulse: true  },
     complete:   { dot: "bg-emerald-400",   text: "text-emerald-500",  label: "COMPLETE",   pulse: false },
   }[pipelineStatus];
   return (
@@ -1050,122 +1058,151 @@ export default function HomePage() {
     result && (result.decision === "block" || result.decision === "flag") && result.risk_score >= 70;
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#09090e" }}>
+    <div
+      className="aurel-grid-drift min-h-screen overflow-x-hidden text-stone-100"
+      style={{
+        background:
+          "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(180deg, rgba(255,255,255,0.035) 1px, transparent 1px), #050505",
+        backgroundSize: "72px 72px",
+      }}
+    >
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <nav className="border-b border-zinc-800/60 backdrop-blur-sm sticky top-0 z-50" style={{ background: "rgba(9,9,14,0.85)" }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <nav className="border-b border-stone-800/80 backdrop-blur-sm sticky top-0 z-50" style={{ background: "rgba(5,5,5,0.88)" }}>
+        <div className="max-w-7xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Aurel" className="w-7 h-7 rounded-lg" />
-            <span className="font-bold text-lg tracking-tight">Aurel</span>
+            <span className="flex h-8 w-8 items-center justify-center border border-stone-700 bg-stone-100">
+              <img src="/logo.png" alt="Aurel" className="h-6 w-6" />
+            </span>
+            <span className="font-mono text-sm font-semibold uppercase tracking-[0.24em]">Aurel</span>
           </div>
-          <div className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#demo" className="hover:text-white transition-colors">Demo</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
-            <Link href="/dashboard" className="hover:text-white transition-colors text-zinc-500">Dashboard</Link>
+          <div className="hidden lg:flex items-center gap-6 text-[11px] text-stone-500 font-mono uppercase tracking-[0.16em]">
+            <a href="#features" className="hover:text-stone-100 transition-colors">Layers</a>
+            <a href="#demo" className="hover:text-stone-100 transition-colors">Console</a>
+            <Link href="/security" className="hover:text-stone-100 transition-colors">Security</Link>
+            <Link href="/api-reference" className="hover:text-stone-100 transition-colors">API</Link>
+            <Link href="/use-cases" className="hover:text-stone-100 transition-colors">Use cases</Link>
+            <Link href="/benchmark" className="hover:text-stone-100 transition-colors">Benchmark</Link>
+            <a href="#pricing" className="hover:text-stone-100 transition-colors">Access</a>
+            <a href="#contact" className="hover:text-stone-100 transition-colors">Contact</a>
+            <Link href="/dashboard" className="hover:text-stone-100 transition-colors text-stone-600">Dashboard</Link>
           </div>
           <a
             href="#contact"
-            className="bg-white text-black px-4 py-2 rounded-lg text-sm font-semibold hover:bg-zinc-100 transition-colors"
+            className="border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-white"
           >
-            Get API Key
+            Get Key
           </a>
         </div>
       </nav>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className="relative px-6 pt-28 pb-24 text-center overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.18) 0%, transparent 70%)" }}
-        />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 40% 40% at 80% 60%, rgba(37,99,235,0.08) 0%, transparent 60%)" }}
-        />
-        <div className="max-w-4xl mx-auto relative">
-          <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/25 text-violet-400 text-xs font-medium px-3.5 py-1.5 rounded-full mb-8">
-            <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse" />
-            Now in beta · Agentic payment security
+      <section className="aurel-hero relative overflow-hidden border-b border-stone-800/80 px-5 md:px-8">
+        <HeroScene />
+        <div aria-hidden className="aurel-hero-depth aurel-hero-depth-left" />
+        <div aria-hidden className="aurel-hero-depth aurel-hero-depth-bottom" />
+        <div className="relative z-10 mx-auto grid min-h-[780px] max-w-7xl gap-10 pt-16 pb-10 md:min-h-[820px] md:pt-20 lg:grid-cols-[0.94fr_1.06fr] lg:items-center lg:py-24">
+          <div className="aurel-hero-copy max-w-3xl">
+            <div className="aurel-reveal mb-10 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-stone-500">
+              <span className="h-px w-10 bg-stone-600" />
+              Private beta / autonomous action firewall
+            </div>
+            <h1 className="aurel-reveal aurel-delay-1 max-w-5xl text-5xl font-black uppercase leading-[0.9] tracking-[0.01em] text-stone-100 md:text-7xl lg:text-[4rem] xl:text-[7.5rem]">
+              Secure intent before decision passes.
+            </h1>
+            <p className="aurel-reveal aurel-delay-2 mt-8 max-w-2xl text-lg leading-8 text-stone-400 md:text-xl">
+              Aurel is the intent firewall for autonomous actions: policy,
+              behavior, semantic intent, and a signed audit record before an
+              agent can execute high-consequence work.
+            </p>
+            <div className="aurel-reveal aurel-delay-3 mt-10 flex flex-col gap-3 sm:flex-row">
+              <a
+                href="#demo"
+                className="aurel-action aurel-action-light inline-flex items-center justify-center gap-3 border border-stone-100 bg-stone-100 px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
+              >
+                Run console
+                <span aria-hidden>↓</span>
+              </a>
+              <Link
+                href="/dashboard"
+                className="aurel-action inline-flex items-center justify-center gap-3 border border-stone-700 bg-black/40 px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.16em] text-stone-200 transition-colors hover:border-stone-300"
+              >
+                View dashboard
+              </Link>
+            </div>
           </div>
-          <h1 className="text-5xl md:text-[4.5rem] font-extrabold tracking-tight leading-[1.05] mb-6">
-            The Intent Firewall
-            <br />
-            <span
-              style={{
-                background: "linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              for Agentic Payments
-            </span>
-          </h1>
-          <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
-            AI agents will move money autonomously. Aurel sits between your agent and the
-            payment rail — blocking injected instructions, semantic anomalies, and policy violations{" "}
-            <span className="text-zinc-200 font-medium">before a single transaction executes</span>.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="#demo"
-              className="inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 transition-colors text-white px-8 py-3.5 rounded-xl font-semibold text-base"
-            >
-              Try the console
-              <span aria-hidden>↓</span>
-            </a>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center justify-center gap-2 bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700 transition-colors text-white px-8 py-3.5 rounded-xl font-semibold text-base"
-            >
-              View live dashboard
-            </Link>
+
+          <div className="aurel-hero-stage aurel-reveal aurel-delay-4" aria-hidden="true">
+            <div>
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+            <div className="aurel-hero-verdict-grid">
+              <div>
+                <span>policy</span>
+                <strong>pass</strong>
+              </div>
+              <div>
+                <span>semantic</span>
+                <strong>detect</strong>
+              </div>
+              <div>
+                <span>route</span>
+                <strong>contain</strong>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Stats strip ────────────────────────────────────────────────────── */}
-      <div className="border-y border-zinc-800/60 py-6">
-        <div className="max-w-4xl mx-auto px-6 grid grid-cols-3 gap-6 text-center">
-          <div>
-            <div className="text-3xl font-bold text-white">&lt; 50ms</div>
-            <div className="text-xs text-zinc-500 mt-1 uppercase tracking-wide">p99 latency</div>
+      <div className="aurel-reveal-section border-b border-stone-800/80">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 divide-y divide-stone-800/80 px-5 md:grid-cols-3 md:divide-x md:divide-y-0 md:px-8">
+          <div className="py-7 md:pr-8">
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">target p99</div>
+            <div className="mt-2 text-4xl font-black text-stone-100">&lt; 50ms</div>
+            <div className="mt-1 text-sm text-stone-500">Rules and policy checks stay out of the critical path.</div>
           </div>
-          <div>
-            <div className="text-3xl font-bold text-white">3</div>
-            <div className="text-xs text-zinc-500 mt-1 uppercase tracking-wide">defense layers</div>
+          <div className="py-7 md:px-8">
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">control layers</div>
+            <div className="mt-2 text-4xl font-black text-stone-100">3</div>
+            <div className="mt-1 text-sm text-stone-500">Policy, behavior, and intent analysis before execution.</div>
           </div>
-          <div>
-            <div className="text-3xl font-bold text-white">0</div>
-            <div className="text-xs text-zinc-500 mt-1 uppercase tracking-wide">false negatives on hard rules</div>
+          <div className="py-7 md:pl-8">
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">hard-rule misses</div>
+            <div className="mt-2 text-4xl font-black text-stone-100">0</div>
+            <div className="mt-1 text-sm text-stone-500">Deterministic denials remain deterministic.</div>
           </div>
         </div>
       </div>
 
       {/* ── Verification Console ────────────────────────────────────────────── */}
-      <section id="demo" className="pt-20 pb-0">
+      <section id="demo" className="aurel-reveal-section pt-20 pb-0">
         {/* Section header */}
-        <div className="max-w-6xl mx-auto px-6 pb-10">
-          <div className="flex items-end justify-between gap-6">
+        <div className="mx-auto max-w-7xl px-5 pb-10 md:px-8">
+          <div className="grid gap-6 lg:grid-cols-[0.75fr_1fr] lg:items-end">
             <div>
-              <div className="text-[10px] font-mono tracking-[0.15em] text-indigo-500 uppercase mb-3">
-                Live Console · No signup required
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
+                Live console / no signup required
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-3">Verification Console</h2>
-              <p className="text-zinc-400 max-w-lg">
-                Submit a transaction and watch Aurel evaluate it across three defense layers in real time. Select a scenario or write your own.
-              </p>
+              <h2 className="text-3xl font-black uppercase tracking-tight text-stone-100 md:text-5xl">Action checkpoint</h2>
             </div>
-            <div className="hidden lg:flex items-center gap-2 flex-shrink-0 text-[10px] font-mono text-zinc-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" style={{ boxShadow: "0 0 4px #22c55e60" }} />
-              <span>claude-sonnet-4-6 · online</span>
+            <div className="flex items-end justify-between gap-6">
+              <p className="max-w-xl text-stone-400">
+                Submit a financial action as the live example and watch the gate decide:
+                policy pass, behavior pressure, semantic intent, final verdict, signed audit.
+              </p>
+              <div className="hidden flex-shrink-0 items-center gap-2 font-mono text-[10px] text-stone-600 lg:flex">
+                <span className="inline-block h-1.5 w-1.5 bg-emerald-500" />
+                <span>intent analyzer · online</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Console block — full width */}
-        <div className="border-y border-zinc-800" style={{ background: "#0a0a0a" }}>
+        <div className="aurel-surface-line border-y border-stone-800" style={{ background: "#080808" }}>
           {/* Desktop 3-column */}
           <div
             className="hidden lg:grid h-[720px]"
@@ -1190,7 +1227,7 @@ export default function HomePage() {
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-2 py-2 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                      className="w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-2 py-2 focus:outline-none focus:border-stone-400/60 transition-colors"
                     >
                       {["USD", "EUR", "GBP", "ETH", "USDC", "USDT", "BTC"].map((c) => (
                         <option key={c}>{c}</option>
@@ -1210,7 +1247,7 @@ export default function HomePage() {
                     onChange={(e) => setAgentContext(e.target.value)}
                     rows={9}
                     placeholder={"// Agent reasoning, received messages,\n// tool outputs, email content...\n// Paste the full execution context."}
-                    className="w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-3 py-2.5 focus:outline-none focus:border-indigo-500/50 placeholder-zinc-700 resize-none transition-colors leading-relaxed"
+                    className="w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-3 py-2.5 focus:outline-none focus:border-stone-400/60 placeholder-zinc-700 resize-none transition-colors leading-relaxed"
                   />
                 </div>
                 <div>
@@ -1227,7 +1264,7 @@ export default function HomePage() {
                         legitimate: isActive ? "border-emerald-600/60 text-emerald-400" : "border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400",
                         injection:  isActive ? "border-red-600/60 text-red-400"     : "border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400",
                         anomaly:    isActive ? "border-amber-600/60 text-amber-400" : "border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400",
-                        drift:      isActive ? "border-violet-600/60 text-violet-400" : "border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400",
+                        drift:      isActive ? "border-stone-500/70 text-stone-300" : "border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400",
                       }[key];
                       return (
                         <button
@@ -1255,11 +1292,11 @@ export default function HomePage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isRunning}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-900 disabled:text-zinc-700 disabled:border disabled:border-zinc-800 text-white text-[11px] font-mono tracking-[0.15em] uppercase py-2.5 transition-colors focus:outline-none"
+                  className="w-full bg-stone-100 hover:bg-white disabled:bg-zinc-900 disabled:text-zinc-700 disabled:border disabled:border-zinc-800 text-black text-[11px] font-mono font-bold tracking-[0.15em] uppercase py-2.5 transition-colors focus:outline-none"
                 >
                   {isRunning ? (
                     <span className="flex items-center justify-center gap-2.5">
-                      <span className="w-3 h-3 border border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
+                      <span className="w-3 h-3 border border-zinc-500/30 border-t-stone-900 rounded-full animate-spin" />
                       Verifying…
                     </span>
                   ) : (
@@ -1278,8 +1315,8 @@ export default function HomePage() {
               {/* Running micro-banner — sits between header and scrollable body */}
               {isRunning && (
                 <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-zinc-800/40" style={{ background: "#080808" }}>
-                  <span className="w-2.5 h-2.5 border border-zinc-700 border-t-indigo-500 rounded-full animate-spin" />
-                  <span className="text-[10px] font-mono tracking-widest uppercase text-indigo-500/50 animate-pulse">
+                  <span className="w-2.5 h-2.5 border border-zinc-700 border-t-stone-300 rounded-full animate-spin" />
+                  <span className="text-[10px] font-mono tracking-widest uppercase text-stone-400/60 animate-pulse">
                     routing through security pipeline
                   </span>
                 </div>
@@ -1450,16 +1487,16 @@ export default function HomePage() {
           </div>
 
           {/* Mobile notice */}
-          <div className="lg:hidden px-6 py-14 text-center">
-            <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-3">
+          <div className="px-6 py-14 text-center lg:hidden">
+            <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-stone-600">
               Desktop required
             </div>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-stone-500">
               The Verification Console requires a minimum viewport of 1024px. Open on a desktop or laptop to use it.
             </p>
             <a
               href="#contact"
-              className="inline-flex items-center gap-2 mt-6 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="mt-6 inline-flex items-center gap-2 border-b border-stone-600 pb-1 font-mono text-xs uppercase tracking-[0.16em] text-stone-300 transition-colors hover:border-stone-200 hover:text-white"
             >
               Request API access instead →
             </a>
@@ -1468,32 +1505,42 @@ export default function HomePage() {
       </section>
 
       {/* ── Features ───────────────────────────────────────────────────────── */}
-      <section id="features" className="px-6 py-24">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Defense in depth</h2>
-            <p className="text-zinc-400 text-lg">
-              Three complementary layers between your agent and the payment rail.
+      <section id="features" className="aurel-reveal-section border-b border-stone-800/80 px-5 py-24 md:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-14 grid gap-6 lg:grid-cols-[0.85fr_1fr]">
+            <div>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
+                Defense layers
+              </div>
+              <h2 className="text-3xl font-black uppercase tracking-tight text-stone-100 md:text-5xl">
+                Three stops before execution.
+              </h2>
+            </div>
+            <p className="max-w-2xl text-lg leading-8 text-stone-400">
+              Aurel treats agent intent as infrastructure, not content moderation.
+              The system checks what the agent is doing, whether it is allowed, and
+              whether the record can be trusted later.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid border border-stone-800 md:grid-cols-3">
             {FEATURES.map((f, i) => (
               <div
                 key={i}
-                className="relative bg-zinc-900/60 border border-zinc-800 rounded-2xl p-8 hover:border-zinc-700 transition-colors overflow-hidden group"
+                className={`aurel-surface-line group relative min-h-[280px] bg-black/55 p-7 transition-colors hover:bg-stone-950/60 ${
+                  i < FEATURES.length - 1 ? "border-b border-stone-800 md:border-b-0 md:border-r" : ""
+                }`}
               >
-                {i === 1 && (
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{ background: "radial-gradient(ellipse at top right, rgba(124,58,237,0.1), transparent 60%)" }}
-                  />
-                )}
                 <div className="relative">
-                  <div className="w-12 h-12 bg-zinc-800 group-hover:bg-violet-500/10 transition-colors rounded-xl flex items-center justify-center mb-6">
-                    <f.icon className="w-6 h-6 text-zinc-400 group-hover:text-violet-400 transition-colors" />
+                  <div className="mb-10 flex items-center justify-between">
+                    <div className="flex h-11 w-11 items-center justify-center border border-stone-700 bg-stone-950 transition-colors group-hover:border-stone-300">
+                      <f.icon className="h-5 w-5 text-stone-400 group-hover:text-stone-100" />
+                    </div>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-stone-700">
+                      0{i + 1}
+                    </span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3">{f.title}</h3>
-                  <p className="text-zinc-400 text-sm leading-relaxed">{f.description}</p>
+                  <h3 className="mb-4 text-xl font-black uppercase tracking-tight text-stone-100">{f.title}</h3>
+                  <p className="text-sm leading-7 text-stone-500">{f.description}</p>
                 </div>
               </div>
             ))}
@@ -1502,62 +1549,60 @@ export default function HomePage() {
       </section>
 
       {/* ── API Preview ────────────────────────────────────────────────────── */}
-      <section id="api" className="px-6 py-24 border-t border-zinc-800/60">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section id="api" className="aurel-reveal-section border-b border-stone-800/80 px-5 py-24 md:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 lg:grid-cols-[0.76fr_1fr] lg:items-start">
             <div>
-              <div className="inline-flex items-center gap-2 bg-zinc-800 text-zinc-400 text-xs px-3 py-1.5 rounded-full mb-6 font-mono">
+              <div className="mb-6 inline-flex border border-stone-800 px-3 py-1.5 font-mono text-xs text-stone-500">
                 POST /api/verify
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-5 leading-snug">
-                One call.
-                <br />
-                <span className="text-zinc-400">Full protection.</span>
+              <h2 className="mb-5 text-3xl font-black uppercase leading-none tracking-tight text-stone-100 md:text-5xl">
+                One call. One verdict.
               </h2>
-              <p className="text-zinc-400 leading-relaxed mb-8">
-                Send the transaction details and your agent&apos;s reasoning. Aurel evaluates
-                deterministic rules first, then runs a semantic analysis with Claude AI, and returns a
-                clear verdict in milliseconds.
+              <p className="mb-8 leading-8 text-stone-400">
+                Send the action details and execution trace. Aurel evaluates
+                deterministic rules first, checks behavior, analyzes intent, and returns
+                a verdict the runtime can obey.
               </p>
               <div className="space-y-3">
                 {[
-                  { label: "allow", color: "text-emerald-400", desc: "Transaction is safe to execute" },
+                  { label: "allow", color: "text-emerald-400", desc: "Action is safe to execute" },
                   { label: "flag", color: "text-amber-400", desc: "Requires human review before proceeding" },
-                  { label: "block", color: "text-red-400", desc: "Transaction must not be executed" },
+                  { label: "block", color: "text-red-400", desc: "Action must not execute" },
                 ].map((v) => (
                   <div key={v.label} className="flex items-center gap-3">
-                    <code className={`text-sm font-mono font-bold ${v.color} bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg`}>
+                    <code className={`border border-stone-800 bg-black px-2.5 py-1 font-mono text-sm font-bold ${v.color}`}>
                       {v.label}
                     </code>
-                    <span className="text-zinc-400 text-sm">{v.desc}</span>
+                    <span className="text-sm text-stone-500">{v.desc}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div className="space-y-3">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-800 bg-zinc-900/80">
+              <div className="aurel-code-scan overflow-hidden border border-stone-800 bg-black">
+                <div className="flex items-center gap-2 border-b border-stone-800 bg-stone-950/50 px-5 py-3.5">
                   <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
-                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
-                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
+                    <div className="h-2.5 w-2.5 border border-stone-700" />
+                    <div className="h-2.5 w-2.5 border border-stone-700" />
+                    <div className="h-2.5 w-2.5 border border-stone-700" />
                   </div>
-                  <span className="text-xs text-zinc-500 font-mono ml-1">Request</span>
+                  <span className="ml-1 font-mono text-xs text-stone-500">Request</span>
                 </div>
-                <pre className="p-5 text-xs font-mono text-zinc-300 leading-relaxed overflow-x-auto">
+                <pre className="overflow-x-auto p-5 font-mono text-xs leading-relaxed text-stone-300">
                   <code>{CODE_REQUEST}</code>
                 </pre>
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="flex items-center gap-2 px-5 py-3.5 border-b border-zinc-800 bg-zinc-900/80">
+              <div className="aurel-code-scan overflow-hidden border border-stone-800 bg-black">
+                <div className="flex items-center gap-2 border-b border-stone-800 bg-stone-950/50 px-5 py-3.5">
                   <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500/60" />
-                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
-                    <div className="w-3 h-3 rounded-full bg-zinc-700" />
+                    <div className="h-2.5 w-2.5 bg-emerald-500/70" />
+                    <div className="h-2.5 w-2.5 border border-stone-700" />
+                    <div className="h-2.5 w-2.5 border border-stone-700" />
                   </div>
-                  <span className="text-xs text-zinc-500 font-mono ml-1">Response · 200 OK</span>
+                  <span className="ml-1 font-mono text-xs text-stone-500">Response · 200 OK</span>
                 </div>
-                <pre className="p-5 text-xs font-mono text-zinc-300 leading-relaxed overflow-x-auto">
+                <pre className="overflow-x-auto p-5 font-mono text-xs leading-relaxed text-stone-300">
                   <code>{CODE_RESPONSE}</code>
                 </pre>
               </div>
@@ -1567,41 +1612,46 @@ export default function HomePage() {
       </section>
 
       {/* ── Pricing ────────────────────────────────────────────────────────── */}
-      <section id="pricing" className="px-6 py-24 border-t border-zinc-800/60">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
-            <p className="text-zinc-400 text-lg">Start free during beta. Upgrade as you scale.</p>
+      <section id="pricing" className="aurel-reveal-section border-b border-stone-800/80 px-5 py-24 md:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-14 grid gap-6 lg:grid-cols-[0.8fr_1fr]">
+            <div>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
+                Access tiers
+              </div>
+              <h2 className="text-3xl font-black uppercase tracking-tight text-stone-100 md:text-5xl">Start at the gate.</h2>
+            </div>
+            <p className="max-w-xl text-lg leading-8 text-stone-400">
+              Beta access for teams putting agents near financial actions,
+              procurement, approvals, data operations, or external tools.
+            </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid border border-stone-800 md:grid-cols-3">
             {PRICING.map((p, i) => (
               <div
                 key={i}
-                className={`relative bg-zinc-900/60 border rounded-2xl p-8 flex flex-col ${
-                  i === 0 ? "border-violet-500/40" : "border-zinc-800"
+                className={`aurel-surface-line relative flex min-h-[420px] flex-col bg-black/55 p-7 ${
+                  i < PRICING.length - 1 ? "border-b border-stone-800 md:border-b-0 md:border-r" : ""
                 }`}
               >
                 {i === 0 && (
-                  <div
-                    className="absolute inset-0 pointer-events-none rounded-2xl"
-                    style={{ background: "radial-gradient(ellipse at top, rgba(124,58,237,0.08), transparent 60%)" }}
-                  />
+                  <div className="absolute inset-x-0 top-0 h-1 bg-stone-100" />
                 )}
                 <div className="relative flex-1">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold">{p.tier}</h3>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${p.badgeColor}`}>
+                  <div className="mb-8 flex items-center justify-between">
+                    <h3 className="text-xl font-black uppercase tracking-tight text-stone-100">{p.tier}</h3>
+                    <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${p.badgeColor}`}>
                       {p.badge}
                     </span>
                   </div>
                   <div className="mb-6">
-                    <span className="text-4xl font-extrabold">{p.price}</span>
-                    <span className="text-zinc-500 text-sm ml-1">{p.sub}</span>
+                    <span className="text-5xl font-black text-stone-100">{p.price}</span>
+                    <span className="ml-1 text-sm text-stone-500">{p.sub}</span>
                   </div>
                   <ul className="space-y-2.5 mb-8">
                     {p.features.map((feat, fi) => (
-                      <li key={fi} className="flex items-start gap-2.5 text-sm text-zinc-400">
-                        <span className="text-zinc-600 mt-0.5 flex-shrink-0">—</span>
+                      <li key={fi} className="flex items-start gap-2.5 text-sm text-stone-500">
+                        <span className="mt-0.5 flex-shrink-0 font-mono text-stone-700">/</span>
                         {feat}
                       </li>
                     ))}
@@ -1609,7 +1659,7 @@ export default function HomePage() {
                 </div>
                 <a
                   href={p.ctaHref}
-                  className={`w-full text-center py-2.5 rounded-xl text-sm font-semibold transition-colors ${p.ctaStyle}`}
+                  className={`aurel-action w-full py-3 text-center font-mono text-xs font-bold uppercase tracking-[0.16em] transition-colors ${p.ctaStyle}`}
                 >
                   {p.cta}
                 </a>
@@ -1620,37 +1670,49 @@ export default function HomePage() {
       </section>
 
       {/* ── Contact ────────────────────────────────────────────────────────── */}
-      <section id="contact" className="px-6 py-24 border-t border-zinc-800/60">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Get in touch</h2>
-          <p className="text-zinc-400 mb-10 text-lg leading-relaxed">
-            Request API access, ask a technical question, or discuss an enterprise deployment.
-            We respond within one business day.
-          </p>
-          <a
-            href="mailto:contact@aurel.io?subject=API Access Request"
-            className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 transition-colors text-white px-10 py-4 rounded-xl font-semibold text-lg"
-          >
-            contact@aurel.io
-            <span aria-hidden>→</span>
-          </a>
-          <p className="text-xs text-zinc-600 mt-8 font-mono">
-            PGP key available on request · Response SLA: 1 business day
-          </p>
+      <section id="contact" className="aurel-reveal-section px-5 py-24 md:px-8">
+        <div className="mx-auto grid max-w-7xl gap-8 border-y border-stone-800 py-14 lg:grid-cols-[0.9fr_1fr] lg:items-center">
+          <div>
+            <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
+              Contact
+            </div>
+            <h2 className="text-4xl font-black uppercase tracking-tight text-stone-100 md:text-6xl">Put Aurel before the action.</h2>
+          </div>
+          <div>
+            <p className="mb-8 max-w-xl text-lg leading-8 text-stone-400">
+              Request API access, ask a technical question, or discuss an enterprise
+              deployment. We respond within one business day.
+            </p>
+            <a
+              href="mailto:contact@aurel.io?subject=API Access Request"
+              className="aurel-action aurel-action-light inline-flex items-center gap-3 border border-stone-100 bg-stone-100 px-8 py-4 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
+            >
+              contact@aurel.io
+              <span aria-hidden>→</span>
+            </a>
+            <p className="mt-6 font-mono text-xs text-stone-600">
+              PGP key available on request · Response SLA: 1 business day
+            </p>
+          </div>
         </div>
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-zinc-800/60 px-6 py-8">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-600">
+      <footer className="border-t border-stone-800/80 px-5 py-8 md:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.14em] text-stone-600 sm:flex-row">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Aurel" className="w-5 h-5 rounded-lg" />
+            <span className="flex h-6 w-6 items-center justify-center border border-stone-800 bg-stone-100">
+              <img src="/logo.png" alt="Aurel" className="h-4 w-4" />
+            </span>
             <span>Aurel</span>
           </div>
-          <span>Runtime intent firewall for agentic payments</span>
+          <span>The intent firewall for autonomous actions</span>
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="hover:text-zinc-400 transition-colors">Dashboard</Link>
-            <Link href="/dashboard/settings" className="hover:text-zinc-400 transition-colors">Settings</Link>
+            <Link href="/ai-index" className="transition-colors hover:text-stone-300">AI Index</Link>
+            <Link href="/docs" className="transition-colors hover:text-stone-300">Docs</Link>
+            <Link href="/security" className="transition-colors hover:text-stone-300">Security</Link>
+            <Link href="/benchmark" className="transition-colors hover:text-stone-300">Benchmark</Link>
+            <Link href="/dashboard" className="transition-colors hover:text-stone-300">Dashboard</Link>
           </div>
         </div>
       </footer>

@@ -50,7 +50,7 @@ export default function WorkspacesPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#09090e]">
+    <div className="flex min-h-screen aurel-bg">
       <Sidebar />
       
       <main className="flex-1 ml-64 p-8">
@@ -59,11 +59,11 @@ export default function WorkspacesPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">Workspaces</h1>
-              <p className="text-zinc-400">Manage your workspaces and their configurations</p>
+              <p className="text-stone-400">Manage your workspaces and their configurations</p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-violet-600 hover:bg-violet-500 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+              className="bg-stone-100 hover:bg-white text-black font-medium px-4 py-2  transition-colors"
             >
               + New Workspace
             </button>
@@ -75,20 +75,20 @@ export default function WorkspacesPage() {
               <Link
                 key={workspace.id}
                 href={`/dashboard/workspaces/${workspace.id}`}
-                className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 hover:border-violet-500/50 transition-colors group"
+                className="aurel-panel p-6 hover:border-stone-500/70 transition-colors group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-violet-600/20 rounded-lg flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-violet-400" />
+                  <div className="w-12 h-12 bg-stone-900/80  flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-stone-300" />
                   </div>
                   <span className="text-xs text-zinc-500">
                     {new Date(workspace.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors">
+                <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-stone-300 transition-colors">
                   {workspace.name}
                 </h3>
-                <div className="space-y-2 text-sm text-zinc-400">
+                <div className="space-y-2 text-sm text-stone-400">
                   <div className="flex justify-between">
                     <span>API Keys</span>
                     <span className="text-zinc-300">{workspace.api_keys_count}</span>
@@ -105,14 +105,14 @@ export default function WorkspacesPage() {
           {/* Create Modal */}
           {showCreateModal && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 w-full max-w-md">
+              <div className="border border-stone-800 bg-zinc-950 p-6 w-full max-w-md">
                 <h2 className="text-xl font-semibold text-white mb-4">Create New Workspace</h2>
                 <input
                   type="text"
                   value={newWorkspaceName}
                   onChange={(e) => setNewWorkspaceName(e.target.value)}
                   placeholder="Workspace name"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 mb-4"
+                  className="w-full bg-zinc-800 border border-zinc-700  px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-stone-300 mb-4"
                   autoFocus
                 />
                 <div className="flex gap-3 justify-end">
@@ -121,13 +121,13 @@ export default function WorkspacesPage() {
                       setShowCreateModal(false);
                       setNewWorkspaceName("");
                     }}
-                    className="px-4 py-2 text-zinc-400 hover:text-white transition-colors"
+                    className="px-4 py-2 text-stone-400 hover:text-white transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleCreateWorkspace}
-                    className="bg-violet-600 hover:bg-violet-500 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="bg-stone-100 hover:bg-white text-black font-medium px-4 py-2  transition-colors"
                   >
                     Create
                   </button>

@@ -1,4 +1,5 @@
 import type { PaymentIntent, RuleDecision } from "@/types";
+import type { AurelActionPolicy } from "@/lib/actions/evaluate";
 
 // ─── Policy schema ────────────────────────────────────────────────────────────
 
@@ -49,6 +50,13 @@ export interface WorkspacePolicy {
    * When defined, transactions with an absent or unlisted category are blocked.
    */
   allowed_categories?: string[];
+  strict_categories?: boolean;
+
+  /** Webhook escalation preferences from the settings UI. */
+  escalate_on_block?: boolean;
+  escalate_on_flag?: boolean;
+  escalate_on_risk_score?: boolean;
+  escalate_above_amount?: number;
 
   /** Per-category amount caps (currency of the transaction is assumed). */
   max_amount_by_category?: Record<string, number>;
@@ -59,6 +67,9 @@ export interface WorkspacePolicy {
     allowed_days?: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun">;
     allowed_hours?: { start: number; end: number }; // 0-23 inclusive
   };
+
+  /** Generic pre-tool action policy for agent framework integrations. */
+  action_security?: AurelActionPolicy;
 }
 
 // ─── Result type ─────────────────────────────────────────────────────────────
@@ -231,7 +242,7 @@ function checkAllowedCategories(
   intent: PaymentIntent,
   policy: WorkspacePolicy
 ): PolicyResult | null {
-  if (!policy.allowed_categories?.length) return null;
+  if (policy.strict_categories !== true || !policy.allowed_categories?.length) return null;
 
   const category = intent.metadata?.category as string | undefined;
 

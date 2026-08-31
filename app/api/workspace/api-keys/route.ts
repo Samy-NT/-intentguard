@@ -99,12 +99,44 @@ export async function DELETE(req: NextRequest) {
     return Response.json({ error: parsed.error.issues.map((i) => i.message).join(", ") }, { status: 422 });
   }
 
-  const { error } = await db
+  if (parsed.data.id === auth.api_key_id) {
+    return Response.json({ error: "Cannot revoke the API key used for this request" }, { status: 409 });
+  }
+
+  const { data: target, error: targetError } = await db
+    .from("api_keys")
+    .select("id, role, is_active")
+    .eq("workspace_id", workspace_id)
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+
+  if (targetError) return Response.json({ error: targetError.message }, { status: 500 });
+  if (!target) return Response.json({ error: "API key not found" }, { status: 404 });
+  if (!target.is_active) return Response.json({ error: "API key is already revoked" }, { status: 409 });
+
+  if (target.role === "admin") {
+    const { count, error: countError } = await db
+      .from("api_keys")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspace_id)
+      .eq("role", "admin")
+      .eq("is_active", true);
+
+    if (countError) return Response.json({ error: countError.message }, { status: 500 });
+    if ((count ?? 0) <= 1) {
+      return Response.json({ error: "Cannot revoke the last active admin API key" }, { status: 409 });
+    }
+  }
+
+  const { data, error } = await db
     .from("api_keys")
     .update({ is_active: false, revoked_at: new Date().toISOString() })
     .eq("workspace_id", workspace_id)
-    .eq("id", parsed.data.id);
+    .eq("id", parsed.data.id)
+    .select("id")
+    .maybeSingle();
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (!data) return Response.json({ error: "API key not found" }, { status: 404 });
   return Response.json({ success: true });
 }

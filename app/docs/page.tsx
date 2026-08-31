@@ -10,7 +10,7 @@ const DOC_SECTIONS = [
     content: `
 ## Installation
 
-Install the IntentGuard SDK:
+Install the Aurel SDK package:
 
 \`\`\`bash
 npm install intentguard
@@ -30,16 +30,17 @@ const ig = createIntentGuardClient({
 });
 \`\`\`
 
-3. Verify a payment intent:
+3. Verify an action intent. This example protects a payment action:
 
 \`\`\`typescript
 const decision = await ig.verify({
-  intent_id: "pay_2026_0001",
+  intent_id: "act_2026_0001",
   agent_id: "ag_expense_manager_v1",
   amount: 250,
   currency: "USD",
   recipient: "billing@stripe.com",
   agent_context: "Renewing approved SaaS subscription.",
+  metadata: { action_type: "payment" },
 });
 \`\`\`
 `,
@@ -56,12 +57,13 @@ Authenticates via \`x-api-key\` header. Returns a decision with risk score, trig
 
 \`\`\`json
 {
-  "intent_id": "pay_2026_0001",
+  "intent_id": "act_2026_0001",
   "agent_id": "ag_expense_manager_v1",
   "amount": 250,
   "currency": "USD",
   "recipient": "billing@stripe.com",
-  "agent_context": "Renewing approved SaaS subscription."
+  "agent_context": "Renewing approved SaaS subscription.",
+  "metadata": { "action_type": "payment" }
 }
 \`\`\`
 
@@ -74,15 +76,17 @@ Authenticates via \`x-api-key\` header. Returns a decision with risk score, trig
   "risk_score": 5,
   "triggered_rule": null,
   "evaluated_at": "2026-06-26T12:00:00Z",
-  "intent_id": "pay_2026_0001"
+  "intent_id": "act_2026_0001",
+  "audit_signature": "8f1c...",
+  "audit_signature_version": "audit-v1-hmac-sha256"
 }
 \`\`\`
 
 ### Decision Values
 
-- \`allow\` - Transaction is safe to proceed
-- \`flag\` - Transaction requires manual review
-- \`block\` - Transaction should be blocked
+- \`allow\` - Action is safe to proceed
+- \`flag\` - Action requires manual review
+- \`block\` - Action should be blocked
 `,
   },
   {
@@ -93,17 +97,17 @@ Authenticates via \`x-api-key\` header. Returns a decision with risk score, trig
 
 Sub-millisecond evaluation with zero external calls:
 
-- **Amount thresholds** - Hard caps and soft limits per transaction
-- **Allowlists/Denylists** - Approved and blocked recipients
-- **Currency restrictions** - Block crypto or specific currencies
-- **Velocity limits** - Per-agent rate limits and cumulative spend
+- **Action thresholds** - Hard caps and soft limits for protected actions
+- **Allowlists/Denylists** - Approved and blocked targets
+- **Route restrictions** - Block forbidden destinations or action classes
+- **Velocity limits** - Per-agent rate limits and cumulative exposure
 
 ## Layer 2: Velocity & Behavioral Analysis
 
 Stateful analysis backed by Redis:
 
-- Transaction frequency (per minute, hour, day)
-- Cumulative spend windows
+- Action frequency (per minute, hour, day)
+- Cumulative exposure windows
 - Agent activity patterns
 - Historical baseline comparison
 
@@ -153,6 +157,47 @@ Configure webhooks in your workspace settings to receive real-time notifications
 ### Security
 
 Webhooks are signed with HMAC-SHA256 using your webhook secret. Verify signatures to ensure authenticity.
+Audit exports include a separate HMAC-SHA256 signature for each persisted verification decision.
+`,
+  },
+  {
+    id: "audit",
+    title: "Audit Verification",
+    content: `
+## Signed Audit Trail
+
+Each persisted verification decision includes an HMAC-SHA256 signature over the immutable decision fields.
+
+### Verify a stored log
+
+\`\`\`bash
+curl "https://your-deployment.vercel.app/api/v1/workspace/audit-verify?intent_id=pay_2026_0001" \\
+  -H "x-api-key: YOUR_API_KEY"
+\`\`\`
+
+### Verify an exported record
+
+\`\`\`bash
+curl -X POST "https://your-deployment.vercel.app/api/v1/audit/verify" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "record": {
+      "workspace_id": "00000000-0000-0000-0000-000000000001",
+      "intent_id": "pay_2026_0001",
+      "agent_id": "ag_expense_manager_v1",
+      "recipient": "billing@stripe.com",
+      "merchant_id": null,
+      "amount": 250,
+      "currency": "USD",
+      "decision": "allow",
+      "triggered_rule": null,
+      "risk_score": 5,
+      "evaluated_at": "2026-07-11T12:00:00.000Z"
+    },
+    "audit_signature": "8f1c...",
+    "audit_signature_version": "audit-v1-hmac-sha256"
+  }'
+\`\`\`
 `,
   },
 ];
@@ -163,13 +208,14 @@ export default function DocsPage() {
   const activeContent = DOC_SECTIONS.find((s) => s.id === activeSection);
 
   return (
-    <div className="flex min-h-screen bg-[#09090e]">
+    <div className="flex min-h-screen aurel-bg">
       <Sidebar />
       
       <main className="flex-1 ml-64 p-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-white mb-2">Documentation</h1>
-          <p className="text-zinc-400 mb-8">Complete guide to integrating IntentGuard</p>
+          <div className="aurel-kicker mb-3">Docs / integration manual</div>
+          <h1 className="aurel-title text-4xl mb-2">Documentation</h1>
+          <p className="text-stone-400 mb-8">Complete guide to integrating Aurel before autonomous action execution.</p>
 
           <div className="flex gap-8">
             {/* Sidebar Navigation */}
@@ -179,10 +225,10 @@ export default function DocsPage() {
                   <button
                     key={section.id}
                     onClick={() => setActiveSection(section.id)}
-                    className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                    className={`w-full border px-4 py-2 text-left font-mono text-xs uppercase tracking-[0.08em] transition-colors ${
                       activeSection === section.id
-                        ? "bg-violet-600/20 text-violet-400 border border-violet-500/30"
-                        : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                        ? "border-stone-500 bg-stone-100 text-black"
+                        : "border-transparent text-stone-500 hover:border-stone-800 hover:bg-stone-950 hover:text-stone-200"
                     }`}
                   >
                     {section.title}
@@ -193,10 +239,10 @@ export default function DocsPage() {
 
             {/* Content */}
             <div className="flex-1">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-                <h2 className="text-2xl font-semibold text-white mb-6">{activeContent?.title}</h2>
+              <div className="aurel-panel p-8">
+                <h2 className="text-2xl font-black uppercase tracking-tight text-stone-100 mb-6">{activeContent?.title}</h2>
                 <div className="prose prose-invert prose-zinc max-w-none">
-                  <div className="text-zinc-300 leading-relaxed whitespace-pre-line">
+                  <div className="text-stone-300 leading-relaxed whitespace-pre-line">
                     {activeContent?.content}
                   </div>
                 </div>

@@ -6,7 +6,12 @@ alter table api_keys
   add column if not exists last_used_at timestamptz,
   add column if not exists revoked_at timestamptz;
 
-create type review_status as enum ('not_required', 'pending', 'approved', 'rejected');
+do $$
+begin
+  create type review_status as enum ('not_required', 'pending', 'approved', 'rejected');
+exception
+  when duplicate_object then null;
+end $$;
 
 alter table verify_logs
   add column if not exists review_status review_status not null default 'not_required',
@@ -34,5 +39,6 @@ grant select, insert, update, delete
   on webhook_deliveries
   to service_role;
 
+drop policy if exists "deny all anon" on webhook_deliveries;
 create policy "deny all anon" on webhook_deliveries for all to anon using (false);
 alter table webhook_deliveries enable row level security;

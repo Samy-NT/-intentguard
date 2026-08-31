@@ -1,0 +1,67 @@
+import { createHmac } from "node:crypto";
+
+export const AUDIT_SIGNATURE_VERSION = "audit-v1-hmac-sha256";
+
+export interface AuditDecisionRecord {
+  workspace_id: string;
+  intent_id: string;
+  agent_id: string;
+  recipient: string;
+  merchant_id: string | null;
+  amount: number;
+  currency: string;
+  decision: string;
+  triggered_rule: string | null;
+  risk_score: number;
+  evaluated_at: string;
+}
+
+export function getAuditSigningSecret(): string {
+  return (
+    process.env.AUDIT_SIGNING_SECRET ||
+    process.env.INTENTGUARD_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    ""
+  );
+}
+
+export function canonicalizeAuditValue(value: unknown): string {
+  return JSON.stringify(sortForCanonicalJson(value));
+}
+
+export function signAuditDecision(
+  record: AuditDecisionRecord,
+  secret = getAuditSigningSecret()
+): string {
+  if (!secret) {
+    throw new Error("[audit] Missing audit signing secret");
+  }
+
+  return createHmac("sha256", secret)
+    .update(canonicalizeAuditValue({ version: AUDIT_SIGNATURE_VERSION, record }))
+    .digest("hex");
+}
+
+export function verifyAuditDecisionSignature(
+  record: AuditDecisionRecord,
+  signature: string,
+  secret = getAuditSigningSecret()
+): boolean {
+  return signAuditDecision(record, secret) === signature;
+}
+
+function sortForCanonicalJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortForCanonicalJson);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, nested]) => [key, sortForCanonicalJson(nested)])
+    );
+  }
+
+  return value;
+}

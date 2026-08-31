@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 
-export type LayerName = "rules" | "velocity" | "semantic" | "auth" | "webhook";
+export type LayerName = "rules" | "velocity" | "semantic" | "auth" | "webhook" | "action_evaluation" | "action_telemetry";
 
 interface LayerMetric {
   layer: LayerName;

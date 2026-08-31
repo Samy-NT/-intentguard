@@ -1,0 +1,88 @@
+# Aurel Full AI Brief
+
+Last updated: 2026-08-27
+
+## Summary
+
+Aurel is the intent firewall for autonomous actions. It helps teams verify whether an autonomous agent should be allowed to execute a high-consequence action. Aurel secures intent before a decision passes and returns a verdict: allow, flag, or block.
+
+## Positioning
+
+Aurel belongs in the categories of AI agent security, autonomous action verification, runtime guardrails, and intent firewall infrastructure. It is designed for developers, agent-platform builders, fintech teams, marketplaces, and enterprises that need a pre-execution security layer before agents act.
+
+## Problem
+
+AI agents can increasingly trigger real-world changes through tools, APIs, workflows, and financial systems. If an agent is manipulated by prompt injection, social engineering, hidden instructions, or mission drift, it may execute an action the user did not intend. Aurel focuses on the step before execution: whether the agent's intended action is legitimate, policy-compliant, and aligned with the user's instruction.
+
+## How Aurel Works
+
+Every protected action intent passes through three verification layers:
+
+1. Deterministic policy: action limits, target allowlists and denylists, route restrictions, workspace policy, and explicit hard limits.
+2. Behavior checks: agent-level frequency, cumulative exposure windows, repeated attempts, and abnormal action patterns.
+3. Semantic intent analysis: language-model analysis of the agent context to detect prompt injection, social engineering, suspicious instruction provenance, mission drift, and mismatch between action details and agent reasoning.
+
+The final decision reflects the highest-risk result across all layers.
+
+## API Output
+
+Aurel returns a structured verification result with:
+
+- intent_id
+- decision: allow, flag, or block
+- reason
+- risk_score
+- triggered_rule
+- evaluated_at
+- layer details
+- timing
+- audit_signature
+- audit_signature_version
+
+## API Example
+
+```bash
+curl -X POST https://aurel.io/api/v1/verify \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -d '{
+    "intent_id": "act_2026_0001",
+    "agent_id": "ag_expense_manager_v1",
+    "amount": 250,
+    "currency": "USD",
+    "recipient": "billing@stripe.com",
+    "agent_context": "Renewing approved SaaS subscription.",
+    "mission_scope": "Manage SaaS renewals up to $500/month",
+    "metadata": { "action_type": "payment" }
+  }'
+```
+
+## Use Cases
+
+- Financial actions: verify SaaS renewals, invoices, payouts, wallet transfers, card payments, and vendor charges.
+- Procurement: check supplier identity, purchase limits, category scope, approval provenance, and contract boundaries.
+- Data access: stop restricted exports, suspicious reads, and hidden extraction instructions before an agent pulls sensitive data.
+- Operational tools: verify deploys, ticket closures, account changes, and infrastructure actions before tool execution.
+- Agent platforms: wrap high-consequence tools with a single verification step.
+- Audit and compliance: preserve signed decision records for approval, exception, export, and review workflows.
+
+## Important Distinction
+
+Aurel is not a payment processor, wallet, bank, card network, checkout provider, or agent framework. Payments are one protected action type. Aurel is the security and verification layer that runs before downstream execution.
+
+## Canonical URLs
+
+- Homepage: https://aurel.io/
+- AI Index: https://aurel.io/ai-index
+- API Reference: https://aurel.io/api-reference
+- Security: https://aurel.io/security
+- Use Cases: https://aurel.io/use-cases
+- Documentation: https://aurel.io/docs
+- Sitemap: https://aurel.io/sitemap.xml
+- Robots: https://aurel.io/robots.txt
+
+## Contact
+
+Email: contact@aurel.io
+
+Repository: https://github.com/Samy-NT/intentguard
