@@ -6,16 +6,8 @@
   },
   "crons": [
     {
-      "path": "/api/cron/webhooks",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/nightly-export",
+      "path": "/api/cron/daily",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/retention",
-      "schedule": "30 0 * * *"
     }
   ]
 }

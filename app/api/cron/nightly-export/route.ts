@@ -37,10 +37,7 @@ function summarize(rows: LogSummaryRow[]) {
   return { total: rows.length, by_decision: byDecision, max_risk_score: maxRisk, total_amount_usd: totalAmountUsd };
 }
 
-export async function POST(req: NextRequest) {
-  const auth = requireCronSecret(req);
-  if (auth) return auth;
-
+export async function runNightlyExportCron() {
   const db = createServerClient();
   const { data, error } = await db
     .from("workspaces")
@@ -92,3 +89,11 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ success: true, queued });
 }
+
+export async function POST(req: NextRequest) {
+  const auth = requireCronSecret(req);
+  if (auth) return auth;
+  return runNightlyExportCron();
+}
+
+export const GET = POST;

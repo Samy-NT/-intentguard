@@ -12,10 +12,7 @@ function retentionDays(policy: Record<string, unknown> | null): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 90;
 }
 
-export async function POST(req: NextRequest) {
-  const auth = requireCronSecret(req);
-  if (auth) return auth;
-
+export async function runRetentionCron() {
   const db = createServerClient();
   const { data, error } = await db.from("workspaces").select("id, policy");
   if (error) return Response.json({ error: error.message }, { status: 500 });
@@ -35,3 +32,11 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ success: true, deleted });
 }
+
+export async function POST(req: NextRequest) {
+  const auth = requireCronSecret(req);
+  if (auth) return auth;
+  return runRetentionCron();
+}
+
+export const GET = POST;
