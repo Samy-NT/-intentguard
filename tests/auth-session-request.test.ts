@@ -88,13 +88,13 @@ describe("authenticateRequest dashboard session", () => {
   it("returns 401 when neither API key nor valid session is present", async () => {
     mocks.validateDashboardSession.mockResolvedValue({
       valid: false,
-      error: "Missing x-api-key header",
+      error: "Missing dashboard session",
     });
 
     const auth = await authenticateRequest(new Request("http://localhost/api/logs") as unknown as NextRequest);
 
     expect(auth).toBeInstanceOf(Response);
     expect((auth as Response).status).toBe(401);
-    expect(await (auth as Response).json()).toMatchObject({ error: "Missing x-api-key header" });
+    expect(await (auth as Response).json()).toMatchObject({ error: "Missing dashboard session" });
   });
 });

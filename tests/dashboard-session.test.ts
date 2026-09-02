@@ -7,6 +7,7 @@ import {
   createDashboardSession,
   sessionCookieHeader,
   validateDashboardSession,
+  validateDashboardSessionToken,
 } from "@/lib/dashboard-session";
 
 function mockSessionDb(active = true): SupabaseClient {
@@ -75,6 +76,29 @@ describe("dashboard session", () => {
 
     const result = await validateDashboardSession(
       requestWithCookie(session.token),
+      mockSessionDb(true),
+      new Date("2026-09-01T01:00:00.000Z")
+    );
+
+    expect(result).toMatchObject({
+      valid: true,
+      workspace_id: "ws_1",
+      api_key_id: "key_1",
+      role: "operator",
+      csrf_token: session.csrf_token,
+    });
+  });
+
+  it("validates a raw session token for server-side dashboard guards", async () => {
+    const session = await createDashboardSession({
+      workspace_id: "ws_1",
+      api_key_id: "key_1",
+      role: "operator",
+      now: new Date("2026-09-01T00:00:00.000Z"),
+    });
+
+    const result = await validateDashboardSessionToken(
+      session.token,
       mockSessionDb(true),
       new Date("2026-09-01T01:00:00.000Z")
     );

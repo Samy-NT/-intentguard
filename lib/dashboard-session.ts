@@ -122,11 +122,19 @@ export async function validateDashboardSession(
   db: SupabaseClient,
   now = new Date()
 ): Promise<{ valid: true; workspace_id: string; api_key_id: string; role: ApiKeyRole; csrf_token: string } | { valid: false; error: string }> {
+  const raw = req.cookies.get(DASHBOARD_SESSION_COOKIE)?.value;
+  if (!raw) return { valid: false, error: "Missing dashboard session" };
+
+  return validateDashboardSessionToken(raw, db, now);
+}
+
+export async function validateDashboardSessionToken(
+  raw: string,
+  db: SupabaseClient,
+  now = new Date()
+): Promise<{ valid: true; workspace_id: string; api_key_id: string; role: ApiKeyRole; csrf_token: string } | { valid: false; error: string }> {
   const secret = sessionSecret();
   if (!secret) return { valid: false, error: "Dashboard session secret is not configured" };
-
-  const raw = req.cookies.get(DASHBOARD_SESSION_COOKIE)?.value;
-  if (!raw) return { valid: false, error: "Missing x-api-key header" };
 
   const token = parseToken(raw);
   if (!token) return { valid: false, error: "Invalid dashboard session" };
