@@ -124,7 +124,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${orbitron.variable} aurel-bg text-white antialiased`}>{children}</body>
+      <body className={`${orbitron.variable} aurel-bg aurel-light antialiased`}>{children}</body>
     </html>
   );
 }

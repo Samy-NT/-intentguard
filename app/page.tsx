@@ -1063,12 +1063,12 @@ export default function HomePage() {
       className="aurel-grid-drift min-h-screen overflow-x-hidden text-stone-100"
       style={{
         background:
-          "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(180deg, rgba(255,255,255,0.035) 1px, transparent 1px), #050505",
+          "linear-gradient(90deg, rgba(28,25,23,0.055) 1px, transparent 1px), linear-gradient(180deg, rgba(28,25,23,0.055) 1px, transparent 1px), #fafaf9",
         backgroundSize: "72px 72px",
       }}
     >
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <nav className="border-b border-stone-800/80 backdrop-blur-sm sticky top-0 z-50" style={{ background: "rgba(5,5,5,0.88)" }}>
+      <nav className="border-b border-stone-800/80 backdrop-blur-sm sticky top-0 z-50" style={{ background: "rgba(255,255,255,0.88)" }}>
         <div className="max-w-7xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center border border-stone-700 bg-stone-100">
@@ -1087,14 +1087,21 @@ export default function HomePage() {
             <Link href="/startup" className="hover:text-stone-100 transition-colors">Startup</Link>
             <a href="#pricing" className="hover:text-stone-100 transition-colors">Access</a>
             <a href="#contact" className="hover:text-stone-100 transition-colors">Contact</a>
-            <Link href="/dashboard" className="hover:text-stone-100 transition-colors text-stone-600">Dashboard</Link>
           </div>
-          <a
-            href="#contact"
-            className="border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-white"
-          >
-            Get Key
-          </a>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/auth/login"
+              className="border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-white"
+            >
+              Get Key
+            </Link>
+            <Link
+              href="/auth/signup"
+              className="text-xs font-bold uppercase tracking-[0.12em] text-stone-600 transition-colors hover:text-stone-300"
+            >
+              Sign up
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -1125,12 +1132,6 @@ export default function HomePage() {
                 Run console
                 <span aria-hidden>↓</span>
               </a>
-              <Link
-                href="/dashboard"
-                className="aurel-action inline-flex items-center justify-center gap-3 border border-stone-700 bg-black/40 px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.16em] text-stone-200 transition-colors hover:border-stone-300"
-              >
-                View dashboard
-              </Link>
             </div>
           </div>
 
@@ -1717,7 +1718,6 @@ export default function HomePage() {
             <Link href="/benchmark" className="transition-colors hover:text-stone-300">Benchmark</Link>
             <Link href="/plugins" className="transition-colors hover:text-stone-300">Plugins</Link>
             <Link href="/startup" className="transition-colors hover:text-stone-300">Startup</Link>
-            <Link href="/dashboard" className="transition-colors hover:text-stone-300">Dashboard</Link>
           </div>
         </div>
       </footer>
