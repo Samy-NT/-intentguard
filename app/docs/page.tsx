@@ -10,7 +10,7 @@ const DOC_SECTIONS = [
     content: `
 ## Installation
 
-Install the Aurel SDK package:
+Install the Aurels SDK package:
 
 \`\`\`bash
 npm install intentguard
@@ -215,7 +215,7 @@ export default function DocsPage() {
         <div className="max-w-6xl mx-auto">
           <div className="aurel-kicker mb-3">Docs / integration manual</div>
           <h1 className="aurel-title text-4xl mb-2">Documentation</h1>
-          <p className="text-stone-400 mb-8">Complete guide to integrating Aurel before autonomous action execution.</p>
+          <p className="text-stone-400 mb-8">Complete guide to integrating Aurels before autonomous action execution.</p>
 
           <div className="flex gap-8">
             {/* Sidebar Navigation */}

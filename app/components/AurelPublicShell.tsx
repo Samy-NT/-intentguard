@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 export function AurelPublicHeader({
@@ -15,9 +16,9 @@ export function AurelPublicHeader({
       <div className="aurel-shell">
         <Link href="/" className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-stone-500 transition-colors hover:text-stone-100">
           <span className="flex h-6 w-6 items-center justify-center border border-stone-800 bg-stone-100">
-            <img src="/logo.png" alt="Aurel" className="h-4 w-4" />
+            <Image src="/logo.png" alt="Aurels" width={16} height={16} className="h-4 w-4" />
           </span>
-          Aurel
+          Aurels
         </Link>
         <div className="mt-12 grid gap-7 lg:grid-cols-[0.78fr_1fr] lg:items-end">
           <div>

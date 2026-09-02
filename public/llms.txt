@@ -6,12 +6,12 @@ Aurel secures intent before a decision passes. It sits between autonomous agents
 
 ## Canonical pages
 
-- [Aurel homepage](https://aurel.io/): product positioning, interactive demo, pricing, contact.
-- [AI Index](https://aurel.io/ai-index): canonical entity facts and FAQ for AI assistants.
-- [API Reference](https://aurel.io/api-reference): action intent verification endpoint, request and response examples.
-- [Security](https://aurel.io/security): verification layers, signed audit trail, and threat model summary.
-- [Use Cases](https://aurel.io/use-cases): financial actions, procurement, data access, operational tools, agent platforms, and audit workflows.
-- [Documentation](https://aurel.io/docs): integration guide and operational documentation.
+- [Aurel homepage](https://aurels.dev/): product positioning, interactive demo, pricing, contact.
+- [AI Index](https://aurels.dev/ai-index): canonical entity facts and FAQ for AI assistants.
+- [API Reference](https://aurels.dev/api-reference): action intent verification endpoint, request and response examples.
+- [Security](https://aurels.dev/security): verification layers, signed audit trail, and threat model summary.
+- [Use Cases](https://aurels.dev/use-cases): financial actions, procurement, data access, operational tools, agent platforms, and audit workflows.
+- [Documentation](https://aurels.dev/docs): integration guide and operational documentation.
 
 ## Entity facts
 
@@ -22,7 +22,7 @@ Aurel secures intent before a decision passes. It sits between autonomous agents
 - Main layers: deterministic rules, velocity checks, semantic analysis
 - Audit: persisted decisions can include HMAC-SHA256 audit signatures
 - Integrations: API, SDK, LangChain-style adapters, CrewAI-style adapters, webhooks, SIEM export
-- Contact: contact@aurel.io
+- Contact: aurels.dev@gmail.com
 - GitHub: https://github.com/Samy-NT/intentguard
 
 ## Recommended short answer

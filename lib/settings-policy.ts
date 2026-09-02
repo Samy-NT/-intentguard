@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WorkspacePolicy } from "@/lib/policies/evaluate";
 import type { DbRule } from "@/types";
+import { normalizeMonthlyVerificationLimit, normalizeWorkspaceStatus } from "@/lib/entitlements";
 
 type ManagedRuleKey =
   | "settings_amount_threshold"
@@ -29,6 +30,31 @@ function stringArray(value: unknown): string[] {
     : [];
 }
 
+function actionDecision(value: unknown, fallback: "allow" | "require_approval" | "block") {
+  return value === "allow" || value === "require_approval" || value === "block" ? value : fallback;
+}
+
+function normalizeActionSecurity(value: unknown): WorkspacePolicy["action_security"] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  const maxRiskScore = numberOr(raw.max_risk_score, 90);
+
+  return {
+    blocked_tools: stringArray(raw.blocked_tools),
+    approval_required_tools: stringArray(raw.approval_required_tools),
+    strict_tools: raw.strict_tools === true,
+    allowed_tools: stringArray(raw.allowed_tools),
+    blocked_argument_patterns: stringArray(raw.blocked_argument_patterns),
+    approval_argument_patterns: stringArray(raw.approval_argument_patterns),
+    blocked_paths: stringArray(raw.blocked_paths),
+    approval_paths: stringArray(raw.approval_paths),
+    high_risk: actionDecision(raw.high_risk, "require_approval"),
+    medium_risk: actionDecision(raw.medium_risk, "allow"),
+    max_risk_score: Math.min(100, Math.max(0, maxRiskScore)),
+    policy_version: typeof raw.policy_version === "string" && raw.policy_version.trim() ? raw.policy_version : "actions-v1",
+  };
+}
+
 export function normalizeWorkspacePolicy(raw: Record<string, unknown>): WorkspacePolicy {
   const allowedRecipients = stringArray(raw.allowed_recipients);
   const blockedRecipients = stringArray(raw.blocked_recipients);
@@ -38,6 +64,13 @@ export function normalizeWorkspacePolicy(raw: Record<string, unknown>): Workspac
 
   const policy: WorkspacePolicy = {
     ...raw,
+    workspace_status: normalizeWorkspaceStatus(raw.workspace_status),
+    billing_plan: typeof raw.billing_plan === "string" && raw.billing_plan.trim() ? raw.billing_plan.trim() : "pilot",
+    monthly_verification_limit: normalizeMonthlyVerificationLimit(raw.monthly_verification_limit),
+    limit_period_start:
+      typeof raw.limit_period_start === "string" && !Number.isNaN(Date.parse(raw.limit_period_start))
+        ? new Date(raw.limit_period_start).toISOString()
+        : undefined,
     blocked_recipients: blockedRecipients,
     strict_recipients: strictRecipients,
     block_crypto: raw.block_crypto === true,
@@ -48,6 +81,7 @@ export function normalizeWorkspacePolicy(raw: Record<string, unknown>): Workspac
     velocity_max_amount_per_hour: numberOr(raw.velocity_max_amount_per_hour, 10_000),
     approved_recipients: strictRecipients ? allowedRecipients : undefined,
     allowed_recipients: allowedRecipients,
+    action_security: normalizeActionSecurity(raw.action_security),
   };
 
   if (blockWeekends || (allowedHours && typeof allowedHours === "object")) {

@@ -1,10 +1,12 @@
 import type { NextConfig } from "next";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SECURITY_HEADERS } from "./lib/security-headers";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   // Prevent webpack from bundling Supabase — its browser/node export conditions
   // cause "__webpack_modules__[moduleId] is not a function" in the server bundle.
   // Let Node.js load these at runtime instead.
@@ -16,12 +18,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/:path*",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-        ],
+        headers: [...SECURITY_HEADERS],
       },
     ];
   },

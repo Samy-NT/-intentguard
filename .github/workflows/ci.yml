@@ -35,6 +35,33 @@ jobs:
 
       - name: Build application
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          ANTHROPIC_API_KEY: sk-ant-test
+          INTENTGUARD_SECRET: test-intentguard-secret
+          AUDIT_SIGNING_SECRET: test-audit-signing-secret
+          MANDATE_SIGNING_SECRET: test-mandate-signing-secret
+          CRON_SECRET: test-cron-secret
+
+      - name: Smoke production readiness routes
+        run: |
+          npm run start > next-start.log 2>&1 &
+          NEXT_PID=$!
+          trap 'kill $NEXT_PID 2>/dev/null || true' EXIT
+          timeout 45 bash -c 'until curl -fsS http://127.0.0.1:3000/api/health >/dev/null; do sleep 1; done'
+          npm run smoke:prod-readiness -- http://127.0.0.1:3000
+        env:
+          AUREL_SMOKE_BEARER: test-cron-secret
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          ANTHROPIC_API_KEY: sk-ant-test
+          INTENTGUARD_SECRET: test-intentguard-secret
+          AUDIT_SIGNING_SECRET: test-audit-signing-secret
+          MANDATE_SIGNING_SECRET: test-mandate-signing-secret
+          CRON_SECRET: test-cron-secret
 
       - name: Package agent integrations
         run: |
@@ -47,3 +74,5 @@ jobs:
           npm run package:crewai-integration
           npm run package:codex-plugin
           npm run package:agent-integrations
+          npm run package:download-manifest
+          npm run verify:download-artifacts

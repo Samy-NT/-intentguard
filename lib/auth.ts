@@ -4,6 +4,7 @@ import type { ApiKeyRole, DbApiKey } from "@/types";
 import { createServerClient } from "@/lib/supabase/server";
 import { err } from "@/lib/respond";
 import { withTimeout } from "@/lib/timeout";
+import { isMutationMethod, validateCsrfHeader, validateDashboardSession } from "@/lib/dashboard-session";
 
 export async function sha256(text: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -99,9 +100,17 @@ export async function authenticateRequest(
   req: NextRequest
 ): Promise<AuthenticatedRequest | Response> {
   const rawKey = req.headers.get("x-api-key");
-  if (!rawKey) return err("Missing x-api-key header", 401);
 
   const db = createServerClient();
+  if (!rawKey) {
+    const session = await validateDashboardSession(req, db);
+    if (!session.valid) return err(session.error, 401);
+    if (isMutationMethod(req.method) && !validateCsrfHeader(req, session.csrf_token)) {
+      return err("Missing or invalid CSRF token", 403);
+    }
+    return { db, workspace_id: session.workspace_id, api_key_id: session.api_key_id, role: session.role };
+  }
+
   let auth: AuthResult;
   try {
     auth = await withTimeout(validateApiKey(rawKey, db), 5_000, "auth-lookup");

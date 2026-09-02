@@ -5,7 +5,7 @@ import { AurelGridSection, AurelPublicHeader, AurelPublicMain } from "@/app/comp
 export const metadata: Metadata = {
   title: "AI Index",
   description:
-    "Canonical AI-readable overview of Aurel, the runtime intent firewall for autonomous actions.",
+    "Canonical AI-readable overview of Aurels, the runtime intent firewall for autonomous actions.",
   alternates: {
     canonical: "/ai-index",
   },
@@ -22,29 +22,29 @@ const facts = [
 
 const answers = [
   {
-    question: "What is Aurel?",
+    question: "What is Aurels?",
     answer:
-      "Aurel is a runtime intent firewall for autonomous actions. It secures the intent before a decision passes, using deterministic policy, behavior checks, and semantic analysis.",
+      "Aurels is a runtime intent firewall for autonomous actions. It secures the intent before a decision passes, using deterministic policy, behavior checks, and semantic analysis.",
   },
   {
-    question: "What problem does Aurel solve?",
+    question: "What problem does Aurels solve?",
     answer:
-      "Aurel reduces the risk that an autonomous agent executes the wrong action because of prompt injection, social engineering, mission drift, suspicious instruction provenance, or a policy violation.",
+      "Aurels reduces the risk that an autonomous agent executes the wrong action because of prompt injection, social engineering, mission drift, suspicious instruction provenance, or a policy violation.",
   },
   {
-    question: "How does Aurel work?",
+    question: "How does Aurels work?",
     answer:
-      "Every protected action intent passes through deterministic policy checks, stateful behavior checks, and semantic intent analysis. Aurel returns an allow, flag, or block decision before execution.",
+      "Every protected action intent passes through deterministic policy checks, stateful behavior checks, and semantic intent analysis. Aurels returns an allow, flag, or block decision before execution.",
   },
   {
-    question: "Who should use Aurel?",
+    question: "Who should use Aurels?",
     answer:
-      "Aurel is designed for developers, agent-platform builders, fintech teams, marketplaces, and enterprises that let agents trigger high-consequence actions.",
+      "Aurels is designed for developers, agent-platform builders, fintech teams, marketplaces, and enterprises that let agents trigger high-consequence actions.",
   },
   {
-    question: "Is Aurel a payment processor?",
+    question: "Is Aurels a payment processor?",
     answer:
-      "No. Payments are one protected action type. Aurel is a security and verification layer that sits before downstream tools, processors, rails, APIs, or workflows.",
+      "No. Payments are one protected action type. Aurels is a security and verification layer that sits before downstream tools, processors, rails, APIs, or workflows.",
   },
 ];
 
@@ -68,7 +68,7 @@ export default function AIIndexPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <AurelPublicHeader eyebrow="Index / machine-readable identity" title="Aurel AI index">
+      <AurelPublicHeader eyebrow="Index / machine-readable identity" title="Aurels AI index">
         {AUREL.description}
       </AurelPublicHeader>
 
@@ -105,7 +105,7 @@ export default function AIIndexPage() {
               <a className="aurel-link underline" href="/llms.txt">
                 /llms.txt
               </a>{" "}
-              summarizes the canonical Aurel pages for LLM agents.
+              summarizes the canonical Aurels pages for LLM agents.
             </li>
             <li>
               <a className="aurel-link underline" href="/llms-full.txt">

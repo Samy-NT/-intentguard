@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   AUDIT_SIGNATURE_VERSION,
   canonicalizeAuditValue,
@@ -22,6 +22,13 @@ const record: AuditDecisionRecord = {
 };
 
 describe("audit signatures", () => {
+  afterEach(() => {
+    delete process.env.AUDIT_SIGNING_SECRET;
+    delete process.env.AUDIT_SIGNING_PREVIOUS_SECRETS;
+    delete process.env.INTENTGUARD_SECRET;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  });
+
   it("canonicalizes object keys deterministically", () => {
     expect(canonicalizeAuditValue({ b: 2, a: { d: 4, c: 3 } })).toBe(
       '{"a":{"c":3,"d":4},"b":2}'
@@ -41,6 +48,15 @@ describe("audit signatures", () => {
     expect(
       verifyAuditDecisionSignature({ ...record, decision: "block" }, signature, "test-secret")
     ).toBe(false);
+  });
+
+  it("verifies historical records with previous signing secrets after rotation", () => {
+    const signature = signAuditDecision(record, "old-audit-secret");
+    process.env.AUDIT_SIGNING_SECRET = "new-audit-secret";
+    process.env.AUDIT_SIGNING_PREVIOUS_SECRETS = "older-audit-secret, old-audit-secret";
+
+    expect(verifyAuditDecisionSignature(record, signature)).toBe(true);
+    expect(signAuditDecision(record)).toBe(signAuditDecision(record, "new-audit-secret"));
   });
 
   it("exposes a stable version identifier", () => {

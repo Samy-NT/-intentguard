@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Use a free 'tech' font (Orbitron) loaded via layout.tsx head link */
+/* Use a free 'tech' font (Orbitron) loaded via next/font in layout.tsx */
 
 @layer base {
   body {
@@ -599,6 +599,205 @@
   }
 }
 
+.aurel-light {
+  background:
+    linear-gradient(90deg, rgba(28, 25, 23, 0.055) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(28, 25, 23, 0.055) 1px, transparent 1px),
+    #fafaf9;
+  background-size: 72px 72px;
+  color: #1c1917;
+}
+
+.aurel-light.aurel-bg,
+.aurel-light .aurel-bg,
+.aurel-light .aurel-main {
+  background:
+    linear-gradient(90deg, rgba(28, 25, 23, 0.055) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(28, 25, 23, 0.055) 1px, transparent 1px),
+    #fafaf9;
+  background-size: 72px 72px;
+  color: #1c1917;
+}
+
+.aurel-light .aurel-title,
+.aurel-light :where(.text-white, .text-stone-100, .text-stone-200, .text-zinc-200, .text-zinc-300) {
+  color: #1c1917;
+}
+
+.aurel-light :where(.text-stone-300, .text-stone-400, .text-zinc-400, .text-zinc-500, .text-zinc-600) {
+  color: #57534e;
+}
+
+.aurel-light :where(.text-stone-500, .text-stone-600, .text-stone-700) {
+  color: #78716c;
+}
+
+.aurel-light :where(.text-emerald-300, .text-emerald-400) {
+  color: #047857;
+}
+
+.aurel-light :where(.text-red-300, .text-red-400) {
+  color: #b91c1c;
+}
+
+.aurel-light :where(.text-amber-300, .text-amber-400) {
+  color: #b45309;
+}
+
+.aurel-light .aurel-panel,
+.aurel-light .aurel-panel-strong,
+.aurel-light :where(.bg-black\/40, .bg-black\/55, .bg-black\/60, .bg-black\/70, .bg-black\/80, .bg-black\/90, .bg-zinc-900\/60, .bg-zinc-950\/50, .bg-zinc-800\/40, .bg-zinc-800\/60) {
+  border-color: #e7e5e4;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 1px 0 rgba(28, 25, 23, 0.04), 0 18px 48px rgba(28, 25, 23, 0.06);
+}
+
+.aurel-light :where(.bg-black, .bg-stone-950, .bg-zinc-950, .bg-zinc-900, .bg-zinc-800) {
+  background-color: #ffffff;
+}
+
+.aurel-light :where(.border-stone-800, .border-stone-800\/50, .border-stone-800\/60, .border-stone-800\/70, .border-zinc-800, .border-zinc-800\/60, .border-zinc-800\/70, .border-zinc-700, .border-stone-700) {
+  border-color: #e7e5e4;
+}
+
+.aurel-light :where(.divide-zinc-800\/60, .divide-zinc-800\/70) > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e7e5e4;
+}
+
+.aurel-light :where(.hover\:bg-stone-950:hover, .hover\:bg-stone-950\/30:hover, .hover\:bg-stone-950\/60:hover, .hover\:bg-zinc-700:hover, .hover\:bg-stone-900:hover) {
+  background-color: #f5f5f4;
+}
+
+.aurel-light :where(.hover\:text-white:hover, .hover\:text-stone-100:hover, .hover\:text-stone-200:hover, .hover\:text-zinc-200:hover, .hover\:text-zinc-300:hover) {
+  color: #1c1917;
+}
+
+.aurel-light :where(.bg-stone-100) {
+  background-color: #1c1917;
+}
+
+.aurel-light :where(.text-black) {
+  color: #ffffff;
+}
+
+.aurel-light .aurel-button,
+.aurel-light :where(button.bg-stone-100, a.bg-stone-100) {
+  border-color: #1c1917;
+  background: #1c1917;
+  color: #ffffff;
+}
+
+.aurel-light .aurel-button:hover,
+.aurel-light :where(button.hover\:bg-white:hover, a.hover\:bg-white:hover) {
+  background: #44403c;
+  color: #ffffff;
+}
+
+.aurel-light .aurel-button-ghost {
+  border-color: #d6d3d1;
+  background: rgba(255, 255, 255, 0.72);
+  color: #44403c;
+}
+
+.aurel-light .aurel-button-ghost:hover {
+  border-color: #78716c;
+  color: #1c1917;
+}
+
+.aurel-light .aurel-link {
+  color: #44403c;
+  text-decoration-color: #a8a29e;
+}
+
+.aurel-light .aurel-link:hover {
+  color: #000;
+  text-decoration-color: #1c1917;
+}
+
+.aurel-light .aurel-field,
+.aurel-light :where(input, select, textarea).bg-zinc-800 {
+  border-color: #d6d3d1;
+  background: #ffffff;
+  color: #1c1917;
+}
+
+.aurel-light .aurel-field:focus,
+.aurel-light :where(input, select, textarea).bg-zinc-800:focus {
+  border-color: #78716c;
+  box-shadow: 0 0 0 3px rgba(120, 113, 108, 0.14);
+}
+
+.aurel-light ::placeholder {
+  color: #a8a29e;
+}
+
+.aurel-light .aurel-hero {
+  background:
+    radial-gradient(circle at 74% 46%, rgba(28, 25, 23, 0.08), transparent 31rem),
+    radial-gradient(circle at 58% 54%, rgba(4, 120, 87, 0.065), transparent 25rem),
+    linear-gradient(90deg, rgba(250, 250, 249, 0.98) 0%, rgba(250, 250, 249, 0.86) 36%, rgba(250, 250, 249, 0.48) 67%, rgba(250, 250, 249, 0.9) 100%);
+}
+
+.aurel-light .aurel-hero::before {
+  background:
+    linear-gradient(90deg, rgba(28, 25, 23, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(28, 25, 23, 0.045) 1px, transparent 1px);
+}
+
+.aurel-light .aurel-hero::after {
+  background:
+    linear-gradient(90deg, #fafaf9 0%, rgba(250, 250, 249, 0.94) 28%, rgba(250, 250, 249, 0.36) 54%, rgba(250, 250, 249, 0.62) 100%),
+    linear-gradient(180deg, rgba(250, 250, 249, 0.08) 0%, rgba(250, 250, 249, 0) 46%, #fafaf9 100%);
+}
+
+.aurel-light .aurel-hero-depth-left {
+  background: linear-gradient(90deg, #fafaf9 0%, rgba(250, 250, 249, 0.94) 52%, transparent 100%);
+}
+
+.aurel-light .aurel-hero-depth-bottom {
+  background: linear-gradient(180deg, transparent, #fafaf9 86%);
+}
+
+.aurel-light .aurel-hero-copy::before {
+  background: radial-gradient(circle at 22% 44%, rgba(250, 250, 249, 0.92), rgba(250, 250, 249, 0.72) 38%, transparent 72%);
+}
+
+.aurel-light .aurel-hero-verdict-grid {
+  border-color: rgba(214, 211, 209, 0.94);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 20px 80px rgba(28, 25, 23, 0.12);
+}
+
+.aurel-light .aurel-hero-verdict-grid div + div {
+  border-left-color: rgba(214, 211, 209, 0.94);
+}
+
+.aurel-light .aurel-hero-verdict-grid strong,
+.aurel-light .aurel-hero-telemetry strong {
+  color: #1c1917;
+}
+
+.aurel-light .aurel-hero-telemetry div {
+  border-left-color: rgba(120, 113, 108, 0.38);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.26));
+}
+
+.aurel-light .aurel-checkpoint::before {
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(28, 25, 23, 0.08) 48%, rgba(28, 25, 23, 0.13) 50%, transparent 54%),
+    repeating-linear-gradient(180deg, rgba(28, 25, 23, 0.035) 0 1px, transparent 1px 7px);
+  mix-blend-mode: multiply;
+}
+
+.aurel-light .aurel-checkpoint::after,
+.aurel-light .aurel-surface-line::before {
+  background: linear-gradient(90deg, transparent, rgba(28, 25, 23, 0.72), transparent);
+}
+
+.aurel-light .aurel-code-scan::after {
+  background: linear-gradient(180deg, transparent 0%, rgba(28, 25, 23, 0.06) 50%, transparent 55%);
+}
+
 @keyframes aurel-reveal {
   from {
     opacity: 0;
@@ -786,7 +985,7 @@
 
 /* Hero heading: use Orbitron (free Google Font) and slightly reduce size */
 .aurel-hero h1 {
-  font-family: 'Orbitron', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+  font-family: var(--font-orbitron), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
   /* slightly smaller than the previous tailwind sizes; responsive via clamp */
   font-size: clamp(2.8rem, 9.6vw, 5.2rem) !important;
   line-height: 0.92 !important;
@@ -804,7 +1003,7 @@
     /* Hero copy: use Orbitron and slightly reduce paragraph size */
     .aurel-hero-copy,
     .aurel-hero p {
-      font-family: 'Orbitron', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+      font-family: var(--font-orbitron), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
     }
 
     .aurel-hero p {

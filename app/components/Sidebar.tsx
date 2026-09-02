@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,8 +10,10 @@ import {
   Key,
   Building2,
   ShieldCheck,
+  ScrollText,
   GitPullRequestArrow,
   PlugZap,
+  Download,
   BookOpen,
   CreditCard,
   MessageSquare,
@@ -30,7 +33,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Reviews", href: "/dashboard/reviews", icon: GitPullRequestArrow },
   { label: "Integrations", href: "/dashboard/integrations", icon: PlugZap },
+  { label: "Plugins", href: "/plugins", icon: Download },
   { label: "Audit Trail", href: "/dashboard/audit", icon: ShieldCheck },
+  { label: "Mandates", href: "/dashboard/mandates", icon: ScrollText },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "API Keys", href: "/dashboard/api-keys", icon: Key },
   { label: "Workspaces", href: "/dashboard/workspaces", icon: Building2 },
@@ -45,7 +50,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen border-r border-stone-800 bg-black/90 transition-all duration-300 z-50 ${
+      className={`fixed left-0 top-0 z-50 hidden h-screen border-r border-stone-800 bg-black/90 transition-all duration-300 lg:block ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
@@ -54,10 +59,10 @@ export function Sidebar() {
         {!collapsed && (
           <Link href="/" className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center border border-stone-700 bg-stone-100">
-              <img src="/logo.png" alt="Aurel" className="h-6 w-6" />
+              <Image src="/logo.png" alt="Aurels" width={24} height={24} className="h-6 w-6" />
             </span>
             <span className="font-mono text-sm font-semibold uppercase tracking-[0.22em] text-stone-100">
-              Aurel
+              Aurels
             </span>
           </Link>
         )}

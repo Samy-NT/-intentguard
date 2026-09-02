@@ -12,6 +12,7 @@ import {
   Tag,
   Bot,
   Zap,
+  ShieldAlert,
   Bell,
   ClipboardList,
 } from "lucide-react";
@@ -29,6 +30,8 @@ type Category =
   | "other";
 type Sensitivity = "low" | "medium" | "high";
 type SemanticFailMode = "allow" | "flag" | "block";
+type ActionDecision = "allow" | "require_approval" | "block";
+type WorkspaceStatus = "active" | "trialing" | "past_due" | "suspended";
 
 interface Vendor {
   name: string;
@@ -51,7 +54,26 @@ interface ApiKeyRecord {
   created_at: string;
 }
 
+interface ActionSecurityPolicy {
+  blocked_tools: string[];
+  approval_required_tools: string[];
+  strict_tools: boolean;
+  allowed_tools: string[];
+  blocked_argument_patterns: string[];
+  approval_argument_patterns: string[];
+  blocked_paths: string[];
+  approval_paths: string[];
+  high_risk: ActionDecision;
+  medium_risk: ActionDecision;
+  max_risk_score: number;
+  policy_version: string;
+}
+
 interface PolicySettings {
+  workspace_status: WorkspaceStatus;
+  billing_plan: string;
+  monthly_verification_limit: number;
+  limit_period_start: string;
   block_crypto: boolean;
   max_amount_usd: number;
   max_amount_daily_usd: number;
@@ -82,11 +104,16 @@ interface PolicySettings {
   log_retention_days: number;
   log_full_context: boolean;
   nightly_export: boolean;
+  action_security: ActionSecurityPolicy;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DEFAULT: PolicySettings = {
+  workspace_status: "trialing",
+  billing_plan: "pilot",
+  monthly_verification_limit: 10000,
+  limit_period_start: "",
   block_crypto: false,
   max_amount_usd: 10000,
   max_amount_daily_usd: 50000,
@@ -117,7 +144,115 @@ const DEFAULT: PolicySettings = {
   log_retention_days: 90,
   log_full_context: false,
   nightly_export: false,
+  action_security: {
+    blocked_tools: [],
+    approval_required_tools: ["send_email", "payment", "browser"],
+    strict_tools: false,
+    allowed_tools: [],
+    blocked_argument_patterns: ["rm -rf", "/curl\\s+https?:\\/\\/[^\\s]*malicious/i"],
+    approval_argument_patterns: ["git push", "npm publish", "vercel --prod"],
+    blocked_paths: [".env", ".env.local", "node_modules"],
+    approval_paths: ["supabase/migrations", ".github/workflows", "package-lock.json"],
+    high_risk: "require_approval",
+    medium_risk: "allow",
+    max_risk_score: 90,
+    policy_version: "actions-v1",
+  },
 };
+
+const PILOT_TEMPLATES: Array<{ id: string; name: string; description: string; patch: Partial<PolicySettings> }> = [
+  {
+    id: "saas",
+    name: "SaaS renewal",
+    description: "Known vendors, modest caps, strict audit escalation.",
+    patch: {
+      billing_plan: "starter",
+      monthly_verification_limit: 5000,
+      max_amount_usd: 5000,
+      max_amount_daily_usd: 15000,
+      allowed_categories: ["saas", "legal", "finance"],
+      strict_categories: true,
+      known_vendors: [
+        { name: "stripe", max_amount: 5000 },
+        { name: "billing@stripe.com", max_amount: 5000 },
+      ],
+      strict_recipients: true,
+      allowed_recipients: ["billing@stripe.com"],
+      escalate_above_amount: 1000,
+    },
+  },
+  {
+    id: "procurement",
+    name: "Procurement",
+    description: "Hardware and vendor spend with approval for risky tools.",
+    patch: {
+      billing_plan: "pilot",
+      monthly_verification_limit: 25000,
+      max_amount_usd: 10000,
+      max_amount_daily_usd: 50000,
+      allowed_categories: ["hardware", "saas", "legal"],
+      strict_categories: true,
+      velocity_max_per_hour: 6,
+      velocity_max_amount_per_hour: 15000,
+      action_security: {
+        ...DEFAULT.action_security,
+        approval_required_tools: ["send_email", "payment", "browser", "terminal"],
+        high_risk: "require_approval",
+        max_risk_score: 85,
+      },
+    },
+  },
+  {
+    id: "treasury",
+    name: "Treasury",
+    description: "Fail closed, business hours, very narrow recipients.",
+    patch: {
+      billing_plan: "enterprise",
+      monthly_verification_limit: 100000,
+      max_amount_usd: 25000,
+      max_amount_daily_usd: 50000,
+      semantic_fail_mode: "block",
+      block_weekends: true,
+      allowed_hours: { start: 9, end: 17, timezone: "UTC" },
+      strict_recipients: true,
+      allowed_categories: ["finance"],
+      strict_categories: true,
+      escalate_above_amount: 1,
+      action_security: {
+        ...DEFAULT.action_security,
+        blocked_tools: ["terminal", "database", "cloud"],
+        approval_required_tools: ["send_email", "payment", "browser"],
+        high_risk: "block",
+        medium_risk: "require_approval",
+        max_risk_score: 70,
+      },
+    },
+  },
+  {
+    id: "marketplace",
+    name: "Marketplace payouts",
+    description: "Frequent low-value payouts with burst and category controls.",
+    patch: {
+      billing_plan: "pilot",
+      monthly_verification_limit: 50000,
+      max_amount_usd: 1000,
+      max_amount_daily_usd: 25000,
+      allowed_categories: ["finance", "other"],
+      strict_categories: true,
+      velocity_max_per_hour: 25,
+      velocity_max_per_day: 200,
+      velocity_max_amount_per_hour: 5000,
+      escalate_on_risk_score: true,
+      webhook_threshold: 60,
+      action_security: {
+        ...DEFAULT.action_security,
+        approval_required_tools: ["payment", "send_email", "database"],
+        high_risk: "require_approval",
+        max_risk_score: 80,
+      },
+    },
+  },
+];
 
 const CATEGORIES: { id: Category; label: string }[] = [
   { id: "saas", label: "SaaS" },
@@ -420,7 +555,18 @@ export default function SettingsPage() {
     fetch("/api/workspace/settings", { headers: apiKeyHeaders(storedApiKey) })
       .then((r) => r.json())
       .then(({ settings }) => {
-        if (settings) setS((prev) => ({ ...prev, ...settings }));
+        if (settings) {
+          setS((prev) => ({
+            ...prev,
+            ...settings,
+            monthly_verification_limit: settings.monthly_verification_limit ?? 0,
+            limit_period_start: settings.limit_period_start ?? "",
+            action_security: {
+              ...prev.action_security,
+              ...(settings.action_security ?? {}),
+            },
+          }));
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -485,6 +631,10 @@ export default function SettingsPage() {
     const errs: string[] = [];
     if (s.max_amount_usd <= 0) errs.push("Max amount per transaction must be > 0");
     if (s.max_amount_daily_usd <= 0) errs.push("Max daily amount must be > 0");
+    if (!s.billing_plan.trim()) errs.push("Billing plan label is required");
+    if (s.monthly_verification_limit < 0) errs.push("Monthly verification limit must be 0 or greater");
+    if (s.limit_period_start && Number.isNaN(Date.parse(s.limit_period_start)))
+      errs.push("Limit period start must be a valid ISO date");
     if (s.allowed_hours.start >= s.allowed_hours.end)
       errs.push("Allowed hours: start must be before end");
     if (s.webhook_url && !/^https?:\/\/.+/.test(s.webhook_url))
@@ -494,6 +644,8 @@ export default function SettingsPage() {
     if (s.velocity_max_per_hour <= 0) errs.push("Velocity max per hour must be > 0");
     if (s.velocity_max_per_day <= 0) errs.push("Velocity max per day must be > 0");
     if (s.dedup_window_seconds < 0) errs.push("Dedup window must be ≥ 0");
+    if (s.action_security.max_risk_score < 0 || s.action_security.max_risk_score > 100)
+      errs.push("Action security max risk score must be between 0 and 100");
     if (s.per_agent_rules.some((r) => !r.agent_id.trim()))
       errs.push("Agent rules: all agent IDs must be filled in");
     if (s.known_vendors.some((v) => !v.name.trim()))
@@ -560,6 +712,22 @@ export default function SettingsPage() {
     set("per_agent_rules", s.per_agent_rules.filter((_, idx) => idx !== i));
   }
 
+  function setAction<K extends keyof ActionSecurityPolicy>(key: K, value: ActionSecurityPolicy[K]) {
+    set("action_security", { ...s.action_security, [key]: value });
+  }
+
+  function applyTemplate(template: (typeof PILOT_TEMPLATES)[number]) {
+    setS((prev) => ({
+      ...prev,
+      ...template.patch,
+      action_security: {
+        ...prev.action_security,
+        ...(template.patch.action_security ?? {}),
+      },
+    }));
+    showToast("success", `${template.name} pilot template applied`);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -585,7 +753,7 @@ export default function SettingsPage() {
                   IG
                 </div>
                 <span className="font-bold text-lg tracking-tight group-hover:text-zinc-300 transition-colors">
-                  Aurel
+                  Aurels
                 </span>
               </Link>
               <div className="w-px h-5 bg-zinc-700" />
@@ -675,6 +843,28 @@ export default function SettingsPage() {
         )}
 
         <SectionCard
+          icon={ShieldAlert}
+          title="Pilot Templates"
+          description="Start from conservative policies for common paid-pilot scenarios"
+        >
+          <FullRow label="Apply a production pilot profile">
+            <div className="grid gap-3 lg:grid-cols-3">
+              {PILOT_TEMPLATES.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => applyTemplate(template)}
+                  className="border border-stone-800 bg-zinc-950/50 p-4 text-left transition-colors hover:border-stone-500 hover:bg-stone-950/60"
+                >
+                  <div className="text-sm font-semibold text-white">{template.name}</div>
+                  <div className="mt-2 text-xs leading-relaxed text-zinc-500">{template.description}</div>
+                </button>
+              ))}
+            </div>
+          </FullRow>
+        </SectionCard>
+
+        <SectionCard
           icon={Key}
           title="API Keys"
           description="Workspace-scoped keys for production integrations"
@@ -752,6 +942,59 @@ export default function SettingsPage() {
           title="General Policies"
           description="Global transaction limits and baseline security settings"
         >
+          <SettingRow
+            label="Workspace access"
+            description="Controls whether verification requests are accepted for this workspace"
+          >
+            <SelectInput
+              value={s.workspace_status}
+              onChange={(v) => set("workspace_status", v)}
+              options={[
+                { value: "trialing", label: "Trialing" },
+                { value: "active", label: "Active" },
+                { value: "past_due", label: "Past due" },
+                { value: "suspended", label: "Suspended" },
+              ]}
+              className="w-36"
+            />
+          </SettingRow>
+
+          <SettingRow
+            label="Plan label"
+            description="Manual beta packaging label until a billing provider owns subscription state"
+          >
+            <TextInput
+              value={s.billing_plan}
+              onChange={(v) => set("billing_plan", v)}
+              placeholder="pilot"
+              className="w-40"
+            />
+          </SettingRow>
+
+          <SettingRow
+            label="Monthly verification limit"
+            description="Hard cap for new verification requests in the current usage period; 0 means unlimited"
+          >
+            <NumInput
+              value={s.monthly_verification_limit}
+              onChange={(v) => set("monthly_verification_limit", v)}
+              min={0}
+              suffix={s.monthly_verification_limit === 0 ? "unlimited" : "checks"}
+            />
+          </SettingRow>
+
+          <SettingRow
+            label="Usage period start"
+            description="Optional ISO timestamp for quota counting; blank defaults to the current UTC month"
+          >
+            <TextInput
+              value={s.limit_period_start}
+              onChange={(v) => set("limit_period_start", v)}
+              placeholder="2026-09-01T00:00:00.000Z"
+              className="w-64"
+            />
+          </SettingRow>
+
           <SettingRow
             label="Block crypto transactions"
             description="Automatically block any transaction involving crypto recipients or currencies"
@@ -1206,7 +1449,139 @@ export default function SettingsPage() {
           </SettingRow>
         </SectionCard>
 
-        {/* ── Section 6 — Escalation & Webhook ─────────── */}
+        {/* ── Section 6 — Agent Action Security ─────────── */}
+        <SectionCard
+          icon={ShieldAlert}
+          title="Agent Action Security"
+          description="Policy gate for Codex, MCP, Claude Code, CrewAI, Hermes, LangGraph, and OpenClaw tools"
+        >
+          <SettingRow
+            label="Strict tool allowlist"
+            description="Block every tool that is not explicitly allowed"
+          >
+            <Toggle
+              checked={s.action_security.strict_tools}
+              onChange={(v) => setAction("strict_tools", v)}
+            />
+          </SettingRow>
+
+          <FullRow
+            label="Allowed tools"
+            description="Only used when strict tool allowlist is enabled"
+          >
+            <TagsInput
+              tags={s.action_security.allowed_tools}
+              onChange={(v) => setAction("allowed_tools", v)}
+              placeholder="read_file, search, safe_lookup..."
+            />
+          </FullRow>
+
+          <FullRow
+            label="Blocked tools"
+            description="Exact tool names that should never execute"
+          >
+            <TagsInput
+              tags={s.action_security.blocked_tools}
+              onChange={(v) => setAction("blocked_tools", v)}
+              placeholder="terminal, database, cloud..."
+            />
+          </FullRow>
+
+          <FullRow
+            label="Approval-required tools"
+            description="High-consequence tool names routed to human approval"
+          >
+            <TagsInput
+              tags={s.action_security.approval_required_tools}
+              onChange={(v) => setAction("approval_required_tools", v)}
+              placeholder="send_email, payment, browser..."
+            />
+          </FullRow>
+
+          <FullRow
+            label="Argument policy patterns"
+            description="Plain text or bounded /regex/i patterns matched against tool arguments"
+          >
+            <div className="grid gap-3 lg:grid-cols-2">
+              <TagsInput
+                tags={s.action_security.blocked_argument_patterns}
+                onChange={(v) => setAction("blocked_argument_patterns", v)}
+                placeholder="rm -rf, /curl\\s+https?:\\/\\/bad/i..."
+              />
+              <TagsInput
+                tags={s.action_security.approval_argument_patterns}
+                onChange={(v) => setAction("approval_argument_patterns", v)}
+                placeholder="git push, npm publish..."
+              />
+            </div>
+          </FullRow>
+
+          <FullRow
+            label="Path policy"
+            description="Protect sensitive paths before file or shell actions touch them"
+          >
+            <div className="grid gap-3 lg:grid-cols-2">
+              <TagsInput
+                tags={s.action_security.blocked_paths}
+                onChange={(v) => setAction("blocked_paths", v)}
+                placeholder=".env, secrets, node_modules..."
+              />
+              <TagsInput
+                tags={s.action_security.approval_paths}
+                onChange={(v) => setAction("approval_paths", v)}
+                placeholder="supabase/migrations, .github/workflows..."
+              />
+            </div>
+          </FullRow>
+
+          <SettingRow
+            label="High-risk default"
+            description="Fallback decision for privileged tools and risky side effects"
+          >
+            <SelectInput
+              value={s.action_security.high_risk}
+              onChange={(v) => setAction("high_risk", v)}
+              options={[
+                { value: "require_approval", label: "Require approval" },
+                { value: "block", label: "Block" },
+                { value: "allow", label: "Allow" },
+              ]}
+              className="w-44"
+            />
+          </SettingRow>
+
+          <SettingRow
+            label="Medium-risk default"
+            description="Fallback decision for ambiguous but non-critical tools"
+          >
+            <SelectInput
+              value={s.action_security.medium_risk}
+              onChange={(v) => setAction("medium_risk", v)}
+              options={[
+                { value: "allow", label: "Allow" },
+                { value: "require_approval", label: "Require approval" },
+                { value: "block", label: "Block" },
+              ]}
+              className="w-44"
+            />
+          </SettingRow>
+
+          <SettingRow
+            label="Maximum allowed risk score"
+            description="Actions above this score are blocked before execution"
+          >
+            <NumInput
+              value={s.action_security.max_risk_score}
+              onChange={(v) => setAction("max_risk_score", Math.min(100, Math.max(0, v)))}
+              min={0}
+              max={100}
+              suffix="/100"
+              width="w-20"
+            />
+          </SettingRow>
+        </SectionCard>
+
+        {/* ── Section 7 — Escalation & Webhook ─────────── */}
         <SectionCard
           icon={Bell}
           title="Escalation & Webhook"
@@ -1216,7 +1591,7 @@ export default function SettingsPage() {
             <TextInput
               value={s.webhook_url}
               onChange={(v) => set("webhook_url", v)}
-              placeholder="https://hooks.example.com/Aurel"
+              placeholder="https://hooks.example.com/Aurels"
               type="url"
               className="w-full"
             />
@@ -1248,7 +1623,7 @@ export default function SettingsPage() {
             <TextInput
               value={s.siem_url}
               onChange={(v) => set("siem_url", v)}
-              placeholder="https://siem.example.com/ingest/Aurel"
+              placeholder="https://siem.example.com/ingest/Aurels"
               type="url"
               className="w-full"
             />

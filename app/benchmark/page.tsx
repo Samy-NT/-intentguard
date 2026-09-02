@@ -4,13 +4,84 @@ import ollamaE2E from "../../benchmark/results/ollama-e2e-latest.json";
 import { AurelGridSection, AurelPublicHeader, AurelPublicMain } from "@/app/components/AurelPublicShell";
 
 export const metadata: Metadata = {
-  title: "Agent Security Benchmark 2026",
+  title: "Aurels Benchmark Results 2026",
   description:
-    "Open, reproducible benchmark of agent stacks (LangGraph, CrewAI, OpenAI Agents SDK, MCP, browser agents) against the OWASP Top 10 for Agentic Applications 2026 — attack success rate, false-positive rate, latency overhead and auditability, with and without Aurel.",
+    "Open, reproducible benchmark of agent stacks (LangGraph, CrewAI, OpenAI Agents SDK, MCP, browser agents) against the OWASP Top 10 for Agentic Applications 2026 — attack success rate, false-positive rate, latency overhead and auditability, with and without Aurels.",
   alternates: { canonical: "/benchmark" },
 };
 
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+const engineTone = {
+  aurel: {
+    badge: "border-emerald-400/45 bg-emerald-400/10 text-emerald-200",
+    bar: "bg-emerald-400",
+    row: "bg-emerald-950/20",
+    text: "text-emerald-300",
+  },
+  "no-guardrail": {
+    badge: "border-red-400/45 bg-red-500/10 text-red-200",
+    bar: "bg-red-400",
+    row: "bg-red-950/15",
+    text: "text-red-300",
+  },
+  "static-allowlist": {
+    badge: "border-amber-400/45 bg-amber-400/10 text-amber-200",
+    bar: "bg-amber-400",
+    row: "bg-amber-950/10",
+    text: "text-amber-300",
+  },
+  "regex-filter": {
+    badge: "border-orange-400/45 bg-orange-400/10 text-orange-200",
+    bar: "bg-orange-400",
+    row: "bg-orange-950/10",
+    text: "text-orange-300",
+  },
+} as const;
+
+function toneFor(engine: string) {
+  return engineTone[engine as keyof typeof engineTone] ?? engineTone["no-guardrail"];
+}
+
+function MetricBar({
+  value,
+  tone,
+  label,
+  invert = false,
+}: {
+  value: number;
+  tone: string;
+  label: string;
+  invert?: boolean;
+}) {
+  const width = Math.max(2, Math.min(100, value * 100));
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.12em]">
+        <span className="text-stone-600">{label}</span>
+        <span className={invert ? "text-red-300" : "text-emerald-300"}>{pct(value)}</span>
+      </div>
+      <div className="h-2 overflow-hidden border border-stone-800 bg-stone-950">
+        <div className={`h-full ${tone}`} style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function ComparisonBars({
+  without,
+  withAurels,
+}: {
+  without: number;
+  withAurels: number;
+}) {
+  return (
+    <div className="space-y-3">
+      <MetricBar value={without} tone="bg-red-400" label="Without" invert />
+      <MetricBar value={withAurels} tone="bg-emerald-400" label="With Aurels" />
+    </div>
+  );
+}
 
 const verdictExamples = [
   {
@@ -37,6 +108,8 @@ export default function BenchmarkPage() {
   const leaderboard = report.leaderboard;
   const staticAllowlist = leaderboard.find((entry) => entry.engine === "static-allowlist");
   const regexFilter = leaderboard.find((entry) => entry.engine === "regex-filter");
+  const noGuardrail = leaderboard.find((entry) => entry.engine === "no-guardrail");
+  const aurels = leaderboard.find((entry) => entry.engine === "aurel");
   // One engine pass = one full sweep of the corpus; avoid counting each
   // scenario once per engine.
   const corpus = report.runs.filter((run) => run.engine === "no-guardrail");
@@ -45,12 +118,88 @@ export default function BenchmarkPage() {
 
   return (
     <AurelPublicMain>
-      <AurelPublicHeader eyebrow="Open benchmark / edition 2026.08" title="How secure is the agent ecosystem, actually?">
-        The Aurel Agent Security Benchmark runs a reproducible corpus of {attackTotal} attacks and{" "}
+      <AurelPublicHeader eyebrow="Aurels benchmark results / edition 2026.08" title="How secure is the agent ecosystem, actually?">
+        The Aurels Agent Security Benchmark runs a reproducible corpus of {attackTotal} attacks and{" "}
         {benignTotal} benign controls against five agent
         stacks, mapped to the OWASP Top 10 for Agentic Applications 2026. Every number below is generated
         by an open harness you can run yourself: <code className="font-mono text-stone-200">npm run benchmark</code>.
       </AurelPublicHeader>
+
+      <AurelGridSection>
+        <div className="grid gap-px border border-stone-800 bg-stone-800 md:grid-cols-4">
+          {[
+            ["Attack success with Aurels", pct(aurels?.asr ?? 0), "All benchmarked attacks were blocked or held for approval.", "text-emerald-300"],
+            ["Benign false positives", pct(aurels?.fpr ?? 0), "Normal actions continued without being blocked by the policy engine.", "text-emerald-300"],
+            ["Attack success without guardrail", pct(noGuardrail?.asr ?? 1), "The same corpus executes cleanly when no action firewall is present.", "text-red-300"],
+            ["Top score", `${aurels?.score ?? 100}`, "Aurels ranks first against no guardrail, static allowlists, and regex filters.", "text-emerald-300"],
+          ].map(([label, value, detail, color]) => (
+            <div key={label} className="bg-black/60 p-6">
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-stone-600">{label}</div>
+              <div className={`mt-5 text-4xl font-black uppercase tracking-tight ${color}`}>{value}</div>
+              <p className="mt-4 text-sm leading-6 text-stone-500">{detail}</p>
+            </div>
+          ))}
+        </div>
+      </AurelGridSection>
+
+      <AurelGridSection>
+        <div className="mb-8 grid gap-6 lg:grid-cols-[0.72fr_1fr] lg:items-end">
+          <div>
+            <div className="aurel-kicker mb-3">Impact graph</div>
+            <h2 className="aurel-title text-3xl md:text-5xl">Aurels turns execution risk into zero executed attacks.</h2>
+          </div>
+          <p className="max-w-2xl text-lg leading-8 text-stone-400">
+            The chart compares attack success rate by guardrail strategy. Red means the attack still executed;
+            green means Aurels stopped it before the tool could create a side effect.
+          </p>
+        </div>
+        <div className="grid gap-px border border-stone-800 bg-stone-800 lg:grid-cols-[1fr_0.9fr]">
+          <div className="bg-black/60 p-6">
+            <div className="space-y-5">
+              {leaderboard
+                .slice()
+                .sort((a, b) => b.asr - a.asr)
+                .map((entry) => {
+                  const tone = toneFor(entry.engine);
+                  return (
+                    <div key={entry.engine} className="grid gap-3 md:grid-cols-[11rem_1fr_4rem] md:items-center">
+                      <div>
+                        <span className={`inline-flex border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] ${tone.badge}`}>
+                          {entry.label}
+                        </span>
+                      </div>
+                      <div className="h-5 overflow-hidden border border-stone-800 bg-stone-950">
+                        <div className={`h-full ${tone.bar}`} style={{ width: `${Math.max(2, entry.asr * 100)}%` }} />
+                      </div>
+                      <div className={`font-mono text-sm font-black ${tone.text}`}>{pct(entry.asr)}</div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+          <div className="bg-black/60 p-6">
+            <div className="aurel-kicker mb-5">With vs without</div>
+            <ComparisonBars
+              without={ollamaE2E.overall.attackSuccessRateWithoutAurel}
+              withAurels={ollamaE2E.overall.attackSuccessRateWithAurel}
+            />
+            <div className="mt-8 grid grid-cols-2 gap-px border border-stone-800 bg-stone-800">
+              <div className="bg-red-950/20 p-4">
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-red-300">Unsafe proposals</div>
+                <div className="mt-3 text-3xl font-black text-red-200">
+                  {ollamaE2E.overall.modelUnsafeAttackProposals}
+                </div>
+              </div>
+              <div className="bg-emerald-950/20 p-4">
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-300">Stopped or held</div>
+                <div className="mt-3 text-3xl font-black text-emerald-200">
+                  {ollamaE2E.overall.aurelBlockedAttacks + ollamaE2E.overall.aurelApprovalAttacks}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AurelGridSection>
 
       <AurelGridSection>
         <div className="aurel-kicker mb-6">Leaderboard</div>
@@ -71,6 +220,7 @@ export default function BenchmarkPage() {
             </thead>
             <tbody>
               {leaderboard.map((entry) => {
+                const tone = toneFor(entry.engine);
                 const medianLatency = Math.max(
                   ...report.runs
                     .filter((run) => run.engine === entry.engine)
@@ -80,20 +230,28 @@ export default function BenchmarkPage() {
                   <tr
                     key={entry.engine}
                     className={`border-b border-stone-800/70 last:border-b-0 ${
-                      entry.engine === "aurel" ? "bg-stone-100/5" : "bg-black/55"
+                      entry.engine === "aurel" ? "bg-emerald-950/20" : tone.row
                     }`}
                   >
                     <td className="px-4 py-3 font-mono text-stone-500">#{entry.rank}</td>
-                    <td className="px-4 py-3 font-semibold text-stone-100">{entry.label}</td>
-                    <td className="px-4 py-3 font-mono text-stone-200">{pct(entry.asr)}</td>
-                    <td className="px-4 py-3 font-mono text-stone-200">{pct(entry.fpr)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${tone.badge}`}>
+                        {entry.label}
+                      </span>
+                    </td>
+                    <td className={`px-4 py-3 font-mono font-black ${entry.asr === 0 ? "text-emerald-300" : "text-red-300"}`}>
+                      {pct(entry.asr)}
+                    </td>
+                    <td className={`px-4 py-3 font-mono font-black ${entry.fpr === 0 ? "text-emerald-300" : "text-amber-300"}`}>
+                      {pct(entry.fpr)}
+                    </td>
                     <td className="px-4 py-3 font-mono text-stone-200">{pct(entry.friction)}</td>
-                    <td className="px-4 py-3 font-mono text-stone-200">
+                    <td className={`px-4 py-3 font-mono font-black ${entry.vectorsCovered === entry.vectorsTotal ? "text-emerald-300" : "text-stone-300"}`}>
                       {entry.vectorsCovered}/{entry.vectorsTotal}
                     </td>
                     <td className="px-4 py-3 font-mono text-stone-200">{entry.auditability.toFixed(1)}</td>
                     <td className="px-4 py-3 font-mono text-stone-200">{medianLatency.toFixed(2)} ms</td>
-                    <td className="px-4 py-3 font-mono text-lg font-black text-stone-100">{entry.score}</td>
+                    <td className={`px-4 py-3 font-mono text-lg font-black ${tone.text}`}>{entry.score}</td>
                   </tr>
                 );
               })}
@@ -117,7 +275,7 @@ export default function BenchmarkPage() {
           <p className="max-w-2xl text-lg leading-8 text-stone-400">
             Across every stack tested, a static tool allowlist stops {pct(1 - (staticAllowlist?.asr ?? 0))} of
             argument-level attacks; keyword regexes stop about the same share while blocking{" "}
-            {pct(regexFilter?.fpr ?? 0)} of legitimate work. Running the same corpus through Aurel&apos;s
+            {pct(regexFilter?.fpr ?? 0)} of legitimate work. Running the same corpus through the Aurels
             action firewall: <span className="text-stone-100">0 attacks executed</span>, 0 benign actions
             blocked.
           </p>
@@ -136,10 +294,10 @@ export default function BenchmarkPage() {
               </div>
               <p className="mt-6 leading-7 text-stone-300">{example.attack}</p>
               <div className="mt-6 border border-red-900/50 bg-red-950/20 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-red-300">
-                Without Aurel → {example.without}
+                Without Aurels → {example.without}
               </div>
               <div className="mt-3 border border-emerald-900/50 bg-emerald-950/20 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-emerald-300">
-                With Aurel → {example.with_}
+                With Aurels → {example.with_}
               </div>
             </article>
           ))}
@@ -154,11 +312,11 @@ export default function BenchmarkPage() {
           </div>
           <p className="max-w-2xl text-lg leading-8 text-stone-400">
             In a second harness, local Ollama models receive attacked agent tasks and emit JSON tool-call
-            proposals. Without Aurel, unsafe proposals are counted as executed. With Aurel, the exact same
+            proposals. Without Aurels, unsafe proposals are counted as executed. With Aurels, the exact same
             proposed action is preflighted before any side effect. Across all model/scenario pairs:{" "}
             <span className="text-red-300">{pct(ollamaE2E.overall.attackSuccessRateWithoutAurel)}</span> ASR
-            without Aurel, <span className="text-emerald-300">{pct(ollamaE2E.overall.attackSuccessRateWithAurel)}</span>{" "}
-            with Aurel.
+            without Aurels, <span className="text-emerald-300">{pct(ollamaE2E.overall.attackSuccessRateWithAurel)}</span>{" "}
+            with Aurels.
           </p>
         </div>
         <div className="overflow-x-auto border border-stone-800">
@@ -167,12 +325,12 @@ export default function BenchmarkPage() {
               <tr className="border-b border-stone-800 bg-black/70 font-mono text-[10px] uppercase tracking-[0.16em] text-stone-500">
                 <th className="px-4 py-3">Model</th>
                 <th className="px-4 py-3">Unsafe proposals</th>
-                <th className="px-4 py-3">Without Aurel ASR</th>
-                <th className="px-4 py-3">With Aurel ASR</th>
-                <th className="px-4 py-3">Aurel blocked</th>
+                <th className="px-4 py-3">Without Aurels ASR</th>
+                <th className="px-4 py-3">With Aurels ASR</th>
+                <th className="px-4 py-3">Aurels blocked</th>
                 <th className="px-4 py-3">Approval</th>
                 <th className="px-4 py-3">Benign FPR</th>
-                <th className="px-4 py-3">Median Aurel latency</th>
+                <th className="px-4 py-3">Median Aurels latency</th>
               </tr>
             </thead>
             <tbody>
@@ -201,7 +359,7 @@ export default function BenchmarkPage() {
           Generated {new Date(ollamaE2E.generatedAt).toISOString().slice(0, 10)} from{" "}
           {ollamaE2E.scenarios.filter((scenario) => scenario.kind === "attack").length} attacked prompts and{" "}
           {ollamaE2E.scenarios.filter((scenario) => scenario.kind === "benign").length} benign controls per model.
-          Model refusals are counted separately as model-safe behavior, not as Aurel blocks.
+          Model refusals are counted separately as model-safe behavior, not as Aurels blocks.
         </p>
       </AurelGridSection>
 
@@ -228,12 +386,31 @@ export default function BenchmarkPage() {
                     {["no-guardrail", "static-allowlist", "regex-filter", "aurel"].map((engine) => {
                       const run = runByEngine(engine);
                       const label = leaderboard.find((entry) => entry.engine === engine)?.label ?? engine;
+                      const tone = toneFor(engine);
                       return (
                         <tr key={engine} className="border-t border-stone-800/70">
-                          <td className="py-1.5 pr-2 text-stone-300">{label}</td>
-                          <td className="py-1.5 font-mono text-stone-400">{run ? pct(run.metrics.asr) : "—"}</td>
+                          <td className={`py-1.5 pr-2 ${engine === "aurel" ? "font-bold text-emerald-300" : "text-stone-300"}`}>
+                            {label}
+                          </td>
+                          <td className="py-1.5 pr-3">
+                            {run ? (
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 min-w-14 flex-1 overflow-hidden bg-stone-900">
+                                  <div
+                                    className={`h-full ${tone.bar}`}
+                                    style={{ width: `${Math.max(3, run.metrics.asr * 100)}%` }}
+                                  />
+                                </div>
+                                <span className={`w-12 text-right font-mono ${run.metrics.asr === 0 ? "text-emerald-300" : "text-red-300"}`}>
+                                  {pct(run.metrics.asr)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-mono text-stone-400">—</span>
+                            )}
+                          </td>
                           <td className="py-1.5 font-mono text-stone-400">{run ? pct(run.metrics.fpr) : "—"}</td>
-                          <td className="py-1.5 font-mono text-stone-400">
+                          <td className={`py-1.5 font-mono ${engine === "aurel" ? "text-emerald-300" : "text-stone-400"}`}>
                             {run ? `${run.metrics.blocked + run.metrics.approval}/${run.metrics.attacks}` : "—"}
                           </td>
                         </tr>
@@ -271,8 +448,8 @@ export default function BenchmarkPage() {
             <div className="aurel-kicker mb-3">Reproduce it</div>
             <h2 className="aurel-title text-2xl md:text-3xl">Open harness, open corpus, open policy.</h2>
             <p className="mt-4 max-w-xl leading-7 text-stone-400">
-              The scenario corpus, the published Aurel policy and every metric live in the repository.
-              The local run needs no API key — Aurel&apos;s deterministic policy engine executes in-process.
+              The scenario corpus, the published Aurels policy and every metric live in the repository.
+              The local run needs no API key — the Aurels deterministic policy engine executes in-process.
             </p>
           </div>
           <div className="border border-stone-800 bg-black/70 p-5 font-mono text-xs leading-6 text-stone-300">
@@ -286,7 +463,7 @@ export default function BenchmarkPage() {
         <p className="mt-8 max-w-3xl text-sm leading-6 text-stone-500">
           Methodology &amp; limitations: the corpus is a curated set of single tool calls ({attackTotal}{" "}
           attacks, {benignTotal} benign controls) executed against each stack&apos;s tool surface
-          in-process; latency measures the decision step only, not model inference; the Aurel engine runs
+          in-process; latency measures the decision step only, not model inference; the Aurels engine runs
           the same deterministic policy code path as the hosted API (the hosted layers add velocity and
           semantic checks on top). Vector IDs and names follow the official{" "}
           <a

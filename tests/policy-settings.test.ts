@@ -111,6 +111,70 @@ describe("settings-backed policy evaluation", () => {
     expect(rules.map((rule) => rule.config.managed_by)).toEqual(Array(7).fill("settings"));
   });
 
+  it("normalizes action security policy fields from untrusted settings JSON", () => {
+    const policy = normalizeWorkspacePolicy({
+      action_security: {
+        blocked_tools: ["terminal", 42, ""],
+        approval_required_tools: ["send_email"],
+        strict_tools: true,
+        allowed_tools: ["read_file"],
+        blocked_argument_patterns: "rm -rf",
+        approval_argument_patterns: ["git push"],
+        blocked_paths: [".env"],
+        approval_paths: ["supabase/migrations"],
+        high_risk: "block",
+        medium_risk: "unknown",
+        max_risk_score: 500,
+        policy_version: "",
+      },
+    });
+
+    expect(policy.action_security).toMatchObject({
+      blocked_tools: ["terminal"],
+      approval_required_tools: ["send_email"],
+      strict_tools: true,
+      allowed_tools: ["read_file"],
+      blocked_argument_patterns: [],
+      approval_argument_patterns: ["git push"],
+      blocked_paths: [".env"],
+      approval_paths: ["supabase/migrations"],
+      high_risk: "block",
+      medium_risk: "allow",
+      max_risk_score: 100,
+      policy_version: "actions-v1",
+    });
+  });
+
+  it("normalizes workspace access and monthly verification entitlements", () => {
+    const policy = normalizeWorkspacePolicy({
+      workspace_status: "suspended",
+      billing_plan: " pilot ",
+      monthly_verification_limit: 42.8,
+      limit_period_start: "2026-09-01",
+    });
+
+    expect(policy).toMatchObject({
+      workspace_status: "suspended",
+      billing_plan: "pilot",
+      monthly_verification_limit: 42,
+      limit_period_start: "2026-09-01T00:00:00.000Z",
+    });
+
+    const fallback = normalizeWorkspacePolicy({
+      workspace_status: "unknown",
+      billing_plan: "",
+      monthly_verification_limit: 0,
+      limit_period_start: "not-a-date",
+    });
+
+    expect(fallback).toMatchObject({
+      workspace_status: "active",
+      billing_plan: "pilot",
+      monthly_verification_limit: null,
+    });
+    expect(fallback.limit_period_start).toBeUndefined();
+  });
+
   it("blocks a SaaS renewal when the vendor-specific cap is exceeded", () => {
     const result = evaluatePolicy(
       intent({ recipient: "billing@stripe.com", merchant_id: "stripe", amount: 12_000 }),

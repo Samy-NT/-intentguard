@@ -1,19 +1,27 @@
 import type { ReactNode } from "react";
+import { Orbitron } from "next/font/google";
 import "./globals.css";
 import { AUREL, absoluteUrl, SITE_URL } from "@/lib/seo";
+
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  weight: ["400", "700", "900"],
+  variable: "--font-orbitron",
+  display: "swap",
+});
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Aurel - The Intent Firewall for Autonomous Actions",
-    template: "%s | Aurel",
+    default: "Aurels - The Intent Firewall for Autonomous Actions",
+    template: "%s | Aurels",
   },
   description: AUREL.description,
   applicationName: AUREL.name,
   keywords: [...AUREL.keywords],
-  authors: [{ name: "Aurel" }],
-  creator: "Aurel",
-  publisher: "Aurel",
+  authors: [{ name: "Aurels" }],
+  creator: "Aurels",
+  publisher: "Aurels",
   alternates: {
     canonical: "/",
   },
@@ -25,20 +33,20 @@ export const metadata = {
     type: "website",
     url: SITE_URL,
     siteName: AUREL.name,
-    title: "Aurel - The Intent Firewall for Autonomous Actions",
+    title: "Aurels - The Intent Firewall for Autonomous Actions",
     description: AUREL.description,
     images: [
       {
         url: "/logo.png",
         width: 512,
         height: 512,
-        alt: "Aurel logo",
+        alt: "Aurels logo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aurel - The Intent Firewall for Autonomous Actions",
+    title: "Aurels - The Intent Firewall for Autonomous Actions",
     description: AUREL.description,
     images: ["/logo.png"],
   },
@@ -108,19 +116,30 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     ],
   };
 
+  const themeBootstrap = `
+    (() => {
+      try {
+        const theme = localStorage.getItem('aurel-theme');
+        const isLight = theme !== 'dark';
+        document.documentElement.classList.toggle('aurel-light', isLight);
+        document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
+      } catch {
+        document.documentElement.classList.add('aurel-light');
+        document.documentElement.style.colorScheme = 'light';
+      }
+    })();
+  `;
+
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap"
-        />
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="aurel-bg text-white antialiased">{children}</body>
+      <body className={`${orbitron.variable} aurel-bg antialiased`}>{children}</body>
     </html>
   );
 }

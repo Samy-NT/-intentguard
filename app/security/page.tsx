@@ -4,7 +4,7 @@ import { AurelGridSection, AurelPublicHeader, AurelPublicMain } from "@/app/comp
 export const metadata: Metadata = {
   title: "Security",
   description:
-    "How Aurel protects autonomous actions with deterministic policy, behavior checks, semantic intent analysis, and signed audit trails.",
+    "How Aurels protects autonomous actions with deterministic policy, behavior checks, semantic intent analysis, and signed audit trails.",
   alternates: {
     canonical: "/security",
   },
@@ -17,11 +17,11 @@ const layers = [
   },
   {
     title: "Velocity Analysis",
-    text: "Aurel tracks agent-level frequency and exposure windows to identify abnormal bursts, repeated attempts, and cumulative operational risk.",
+    text: "Aurels tracks agent-level frequency and exposure windows to identify abnormal bursts, repeated attempts, and cumulative operational risk.",
   },
   {
     title: "Semantic Intent Analysis",
-    text: "Aurel evaluates the agent context for prompt injection, social engineering, mission drift, suspicious provenance, and action-reasoning mismatch.",
+    text: "Aurels evaluates the agent context for prompt injection, social engineering, mission drift, suspicious provenance, and action-reasoning mismatch.",
   },
   {
     title: "Signed Audit Trail",
@@ -33,7 +33,7 @@ export default function SecurityPage() {
   return (
     <AurelPublicMain>
       <AurelPublicHeader eyebrow="Security / pre-execution control" title="Security for autonomous execution">
-        Aurel is built for teams that need runtime guardrails before autonomous agents can act.
+        Aurels is built for teams that need runtime guardrails before autonomous agents can act.
         It verifies intent, checks workspace policy, and preserves an auditable decision trail.
       </AurelPublicHeader>
 

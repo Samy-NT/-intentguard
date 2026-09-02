@@ -4,6 +4,18 @@ import type { AurelActionPolicy } from "@/lib/actions/evaluate";
 // ─── Policy schema ────────────────────────────────────────────────────────────
 
 export interface WorkspacePolicy {
+  /** Workspace access state used for beta/billing/manual pilot enforcement. */
+  workspace_status?: "active" | "trialing" | "past_due" | "suspended";
+
+  /** Optional packaging label shown in billing/ops surfaces. */
+  billing_plan?: string;
+
+  /** Optional monthly verification limit. Null/undefined means unlimited. */
+  monthly_verification_limit?: number | null;
+
+  /** Optional ISO timestamp for the current usage window; defaults to current UTC month. */
+  limit_period_start?: string;
+
   /** Block all crypto-like currencies when enabled. */
   block_crypto?: boolean;
 
