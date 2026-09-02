@@ -1084,6 +1084,7 @@ export default function HomePage() {
             <Link href="/use-cases" className="hover:text-stone-100 transition-colors">Use cases</Link>
             <Link href="/benchmark" className="hover:text-stone-100 transition-colors">Benchmark</Link>
             <Link href="/plugins" className="hover:text-stone-100 transition-colors">Plugins</Link>
+            <Link href="/startup" className="hover:text-stone-100 transition-colors">Startup</Link>
             <a href="#pricing" className="hover:text-stone-100 transition-colors">Access</a>
             <a href="#contact" className="hover:text-stone-100 transition-colors">Contact</a>
             <Link href="/dashboard" className="hover:text-stone-100 transition-colors text-stone-600">Dashboard</Link>
@@ -1715,6 +1716,7 @@ export default function HomePage() {
             <Link href="/security" className="transition-colors hover:text-stone-300">Security</Link>
             <Link href="/benchmark" className="transition-colors hover:text-stone-300">Benchmark</Link>
             <Link href="/plugins" className="transition-colors hover:text-stone-300">Plugins</Link>
+            <Link href="/startup" className="transition-colors hover:text-stone-300">Startup</Link>
             <Link href="/dashboard" className="transition-colors hover:text-stone-300">Dashboard</Link>
           </div>
         </div>
