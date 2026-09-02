@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
-import { Activity, FileCheck2, Shield } from "lucide-react";
+import { Activity, FileCheck2, Moon, Shield, SunMedium } from "lucide-react";
 import { HeroSceneFallback } from "@/app/components/hero/HeroSceneFallback";
 import type {
   RulesLayerResult,
@@ -122,6 +122,20 @@ const PRICING = [
   },
 ];
 
+const NAV_ITEMS = [
+  { label: "Layers", href: "#features" },
+  { label: "Demo", href: "#demo" },
+  { label: "API", href: "#api" },
+  { label: "Docs", href: "/docs" },
+  { label: "Contact", href: "#contact" },
+] as const;
+
+type ThemeMode = "light" | "dark";
+
+function themedSurface(lightMode: boolean, darkBackground: string, lightBackground: string) {
+  return { background: lightMode ? lightBackground : darkBackground };
+}
+
 // ── Console types ──────────────────────────────────────────────────────────────
 
 interface DemoResult {
@@ -224,9 +238,12 @@ function ruleStatusLabel(triggered: boolean, skipped: boolean) {
 
 // ── Console primitives ─────────────────────────────────────────────────────────
 
-function ColHeader({ children }: { children: React.ReactNode }) {
+function ColHeader({ children, lightMode }: { children: React.ReactNode; lightMode: boolean }) {
   return (
-    <div className="px-4 py-2.5 border-b border-zinc-800 flex-shrink-0" style={{ background: "#080808" }}>
+    <div
+      className="px-4 py-2.5 border-b border-zinc-800 flex-shrink-0"
+      style={themedSurface(lightMode, "#080808", "#f4efe8")}
+    >
       <span className="text-[10px] tracking-[0.15em] text-zinc-500 uppercase font-medium font-mono">
         {children}
       </span>
@@ -363,10 +380,12 @@ function RulesLayer({
   visible,
   result,
   dotStatus,
+  lightMode,
 }: {
   visible: boolean;
   result: DemoResult | null;
   dotStatus: "running" | "pass" | "triggered";
+  lightMode: boolean;
 }) {
   if (!visible) return null;
   const layer = result?.layers.rules;
@@ -383,7 +402,7 @@ function RulesLayer({
           executed_in: {fmtUs(layer.exec_us)}
         </div>
       )}
-      <div className="border border-zinc-800 p-3 space-y-2" style={{ background: "#070707" }}>
+      <div className="border border-zinc-800 p-3 space-y-2" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
         {layer ? (
           <>
             {layer.checks.map((check, i) => (
@@ -463,10 +482,12 @@ function VelocityLayer({
   visible,
   result,
   dotStatus,
+  lightMode,
 }: {
   visible: boolean;
   result: DemoResult | null;
   dotStatus: "running" | "pass" | "triggered";
+  lightMode: boolean;
 }) {
   if (!visible) return null;
   const layer = result?.layers.velocity;
@@ -483,7 +504,7 @@ function VelocityLayer({
           executed_in: {fmtUs(layer.exec_us)}
         </div>
       )}
-      <div className="border border-zinc-800 p-3 space-y-2" style={{ background: "#070707" }}>
+      <div className="border border-zinc-800 p-3 space-y-2" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
         {layer ? (
           <>
             {layer.checks.map((c, i) => {
@@ -519,7 +540,7 @@ function VelocityLayer({
   );
 }
 
-function SemanticMissionPanel({ s }: { s: SemanticSignals }) {
+function SemanticMissionPanel({ s, lightMode }: { s: SemanticSignals; lightMode: boolean }) {
   const missionAlign = s.mission_alignment ?? "not_provided";
   const alignColor = {
     coherent: "text-emerald-500",
@@ -540,7 +561,7 @@ function SemanticMissionPanel({ s }: { s: SemanticSignals }) {
   const vectors: string[] = s.attack_vectors ?? [];
 
   return (
-    <div className="border border-zinc-800/60 p-2.5" style={{ background: "#060606" }}>
+    <div className="border border-zinc-800/60 p-2.5" style={themedSurface(lightMode, "#060606", "#faf6ef")}>
       <div className="text-[9px] text-zinc-700 tracking-widest uppercase mb-1.5 font-mono">mission scope</div>
       <div className="space-y-1.5 text-[10px] font-mono">
         <div className="flex gap-3">
@@ -584,11 +605,13 @@ function SemanticLayer({
   result,
   streamedText,
   phase,
+  lightMode,
 }: {
   visible: boolean;
   result: DemoResult | null;
   streamedText: string;
   phase: Phase;
+  lightMode: boolean;
 }) {
   if (!visible) return null;
   const layer = result?.layers.semantic;
@@ -616,7 +639,7 @@ function SemanticLayer({
           ? `claude-sonnet-4-6 · analysis_v2 · ${fmtMs(result?.timing.semantic_ms ?? 0)}`
           : "claude-sonnet-4-6 · analysis_v2"}
       </div>
-      <div className="border border-zinc-800 p-3" style={{ background: "#070707" }}>
+      <div className="border border-zinc-800 p-3" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
         {layer ? (
           layer.ran ? (
             <div className="space-y-3">
@@ -635,7 +658,7 @@ function SemanticLayer({
                 <span className="text-zinc-500">{layer.risk_score}</span>
               </div>
               {layer.signals.mission_scope_declared && (
-                <SemanticMissionPanel s={layer.signals} />
+                <SemanticMissionPanel s={layer.signals} lightMode={lightMode} />
               )}
               <div className="border-t border-zinc-800/50 pt-2.5">
                 <div className="text-[9px] text-zinc-700 tracking-widest uppercase mb-1.5 font-mono">
@@ -675,7 +698,7 @@ const GHOST_VELOCITY = [
   { id: "VELOCITY_AMOUNT_1H",     time: "18µs", pass: true, detail: "$0 cumulative in last 1h (limit: $25,000)" },
 ] as const;
 
-function GhostedPipeline() {
+function GhostedPipeline({ lightMode }: { lightMode: boolean }) {
   return (
     <div className="relative select-none h-full overflow-hidden" style={{ minHeight: "540px" }}>
       <div className="opacity-[0.28] pointer-events-none space-y-5">
@@ -686,7 +709,7 @@ function GhostedPipeline() {
             <span className="flex items-center gap-1.5 text-[10px] tracking-wider font-mono text-emerald-500">● PASS</span>
           </div>
           <div className="text-[10px] text-zinc-700 mb-2 font-mono">executed_in: 34µs</div>
-          <div className="border border-zinc-800 p-3 space-y-2" style={{ background: "#070707" }}>
+          <div className="border border-zinc-800 p-3 space-y-2" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
             {GHOST_RULES.map((r) => (
               <div key={r.id}>
                 <div className="flex items-baseline gap-2 text-[11px] font-mono">
@@ -710,7 +733,7 @@ function GhostedPipeline() {
             <span className="flex items-center gap-1.5 text-[10px] tracking-wider font-mono text-emerald-500">● PASS</span>
           </div>
           <div className="text-[10px] text-zinc-700 mb-2 font-mono">executed_in: 40µs</div>
-          <div className="border border-zinc-800 p-3 space-y-2" style={{ background: "#070707" }}>
+          <div className="border border-zinc-800 p-3 space-y-2" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
             {GHOST_VELOCITY.map((r) => (
               <div key={r.id}>
                 <div className="flex items-baseline gap-2 text-[11px] font-mono">
@@ -732,7 +755,7 @@ function GhostedPipeline() {
             <span className="flex items-center gap-1.5 text-[10px] tracking-wider font-mono text-emerald-500">● PASS</span>
           </div>
           <div className="text-[10px] text-zinc-700 mb-2 font-mono">claude-sonnet-4-6 · analysis_v2 · 1324ms</div>
-          <div className="border border-zinc-800 p-3" style={{ background: "#070707" }}>
+          <div className="border border-zinc-800 p-3" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
             <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[10px] font-mono mb-3">
               <span className="text-zinc-700">injection_detected</span><span className="text-zinc-600">false</span>
               <span className="text-zinc-700">anomaly_detected</span><span className="text-zinc-600">false</span>
@@ -761,7 +784,7 @@ function GhostedPipeline() {
 
 // ── Ghosted decision record ────────────────────────────────────────────────────
 
-function GhostedDecision({ computing }: { computing: boolean }) {
+function GhostedDecision({ computing, lightMode }: { computing: boolean; lightMode: boolean }) {
   return (
     <div className="relative select-none h-full overflow-hidden" style={{ minHeight: "400px" }}>
       <div className="opacity-[0.22] pointer-events-none space-y-4">
@@ -789,7 +812,7 @@ function GhostedDecision({ computing }: { computing: boolean }) {
             <span className="text-xl font-bold tabular-nums text-emerald-400">5<span className="text-zinc-700 text-xs font-normal"> /100</span></span>
           </div>
           <div className="h-px w-full bg-zinc-800 mb-2"><div className="h-full bg-emerald-500" style={{ width: "5%" }} /></div>
-          <div className="border border-zinc-800/50 p-2 text-[10px] font-mono" style={{ background: "#060606" }}>
+          <div className="border border-zinc-800/50 p-2 text-[10px] font-mono" style={themedSurface(lightMode, "#060606", "#faf6ef")}>
             <div className="text-[9px] text-zinc-800 tracking-widest uppercase mb-1">risk score breakdown</div>
             {[["rules_contribution", "5"], ["velocity_contribution", "0"], ["semantic_contribution", "5"]].map(([k, v]) => (
               <div key={k} className="flex justify-between py-px">
@@ -813,7 +836,7 @@ function GhostedDecision({ computing }: { computing: boolean }) {
         <div className="border-t border-zinc-800/60 my-3" />
         <div>
           <div className="text-[10px] tracking-[0.12em] text-zinc-600 uppercase mb-1.5 font-mono">Audit Entry</div>
-          <div className="border border-zinc-800/50 p-3" style={{ background: "#070707" }}>
+          <div className="border border-zinc-800/50 p-3" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
             <div className="space-y-1 text-[10px] font-mono">
               {[
                 ["decision_hash", "sha256:4afd33e6bff5e1f92e2454fd1990e5a1"],
@@ -850,7 +873,7 @@ function GhostedDecision({ computing }: { computing: boolean }) {
 
 // ── Raw response accordion ─────────────────────────────────────────────────────
 
-function RawResponseAccordion({ data }: { data: DemoResult }) {
+function RawResponseAccordion({ data, lightMode }: { data: DemoResult; lightMode: boolean }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const json = JSON.stringify(data, null, 2);
@@ -878,7 +901,7 @@ function RawResponseAccordion({ data }: { data: DemoResult }) {
         </span>
       </button>
       {open && (
-        <div className="mt-2 border border-zinc-800" style={{ background: "#070707" }}>
+        <div className="mt-2 border border-zinc-800" style={themedSurface(lightMode, "#070707", "#faf6ef")}>
           <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800/60">
             <span className="text-[9px] font-mono text-zinc-700 uppercase tracking-widest">application/json</span>
             <button
@@ -903,9 +926,11 @@ function RawResponseAccordion({ data }: { data: DemoResult }) {
 function PipelineColHeader({
   label,
   pipelineStatus,
+  lightMode,
 }: {
   label: string;
   pipelineStatus: "ready" | "processing" | "complete";
+  lightMode: boolean;
 }) {
   const cfg = {
     ready:      { dot: "bg-emerald-600",   text: "text-emerald-700",  label: "READY",      pulse: false },
@@ -913,7 +938,10 @@ function PipelineColHeader({
     complete:   { dot: "bg-emerald-400",   text: "text-emerald-500",  label: "COMPLETE",   pulse: false },
   }[pipelineStatus];
   return (
-    <div className="px-4 py-2.5 border-b border-zinc-800 flex-shrink-0 flex items-center justify-between" style={{ background: "#080808" }}>
+    <div
+      className="px-4 py-2.5 border-b border-zinc-800 flex-shrink-0 flex items-center justify-between"
+      style={themedSurface(lightMode, "#080808", "#f4efe8")}
+    >
       <span className="text-[10px] tracking-[0.15em] text-zinc-500 uppercase font-medium font-mono truncate pr-3">
         {label}
       </span>
@@ -928,6 +956,7 @@ function PipelineColHeader({
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
+  const [theme, setTheme] = useState<ThemeMode>("light");
   // ── Console state ────────────────────────────────────────────────────────────
   const [agentId, setAgentId] = useState<string>(SCENARIOS.legitimate.agentId);
   const [amount, setAmount] = useState<number>(200);
@@ -951,6 +980,19 @@ export default function HomePage() {
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const streamTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("aurel-theme");
+    if (storedTheme === "light" || storedTheme === "dark") {
+      setTheme(storedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("aurel-theme", theme);
+    document.documentElement.classList.toggle("aurel-light", theme === "light");
+    document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
+  }, [theme]);
 
   useEffect(() => {
     return () => {
@@ -1058,48 +1100,72 @@ export default function HomePage() {
   const escalationFired =
     result && (result.decision === "block" || result.decision === "flag") && result.risk_score >= 70;
 
-  return (
-    <div
-      className="aurel-grid-drift min-h-screen overflow-x-hidden text-stone-100"
-      style={{
+  const isLight = theme === "light";
+  const toggleTheme = () => setTheme((current) => (current === "light" ? "dark" : "light"));
+  const pageStyle = isLight
+    ? {
         background:
           "linear-gradient(90deg, rgba(28,25,23,0.055) 1px, transparent 1px), linear-gradient(180deg, rgba(28,25,23,0.055) 1px, transparent 1px), #fafaf9",
         backgroundSize: "72px 72px",
-      }}
+      }
+    : {
+        background:
+          "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(180deg, rgba(255,255,255,0.035) 1px, transparent 1px), #050505",
+        backgroundSize: "72px 72px",
+      };
+
+  const navStyle = isLight ? { background: "rgba(255,255,255,0.88)" } : { background: "rgba(5,5,5,0.78)" };
+  const consoleShellStyle = isLight ? { background: "rgba(255,255,255,0.9)" } : { background: "#080808" };
+  const panelStyle = (darkBg: string, lightBg: string) => themedSurface(isLight, darkBg, lightBg);
+  const demoTitleTone = isLight ? "text-stone-900" : "text-stone-100";
+  const demoBodyTone = isLight ? "text-stone-700" : "text-stone-400";
+  const demoMetaTone = isLight ? "text-stone-600" : "text-stone-500";
+
+  return (
+    <div
+      className={`aurel-grid-drift min-h-screen overflow-x-hidden transition-colors duration-300 ${isLight ? "aurel-light text-stone-900" : "text-stone-100"}`}
+      style={pageStyle}
     >
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <nav className="border-b border-stone-800/80 backdrop-blur-sm sticky top-0 z-50" style={{ background: "rgba(255,255,255,0.88)" }}>
-        <div className="max-w-7xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
+      <nav className="sticky top-0 z-50 border-b border-stone-800/80 backdrop-blur-xl transition-colors duration-300" style={navStyle}>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center border border-stone-700 bg-stone-100">
               <Image src="/logo.png" alt="Aurels" width={24} height={24} className="h-6 w-6" />
             </span>
             <span className="font-mono text-sm font-semibold uppercase tracking-[0.24em]">Aurels</span>
           </div>
-          <div className="hidden lg:flex items-center gap-6 text-[11px] text-stone-500 font-mono uppercase tracking-[0.16em]">
-            <a href="#features" className="hover:text-stone-100 transition-colors">Layers</a>
-            <a href="#demo" className="hover:text-stone-100 transition-colors">Console</a>
-            <Link href="/security" className="hover:text-stone-100 transition-colors">Security</Link>
-            <Link href="/api-reference" className="hover:text-stone-100 transition-colors">API</Link>
-            <Link href="/use-cases" className="hover:text-stone-100 transition-colors">Use cases</Link>
-            <Link href="/benchmark" className="hover:text-stone-100 transition-colors">Benchmark</Link>
-            <Link href="/plugins" className="hover:text-stone-100 transition-colors">Plugins</Link>
-            <Link href="/startup" className="hover:text-stone-100 transition-colors">Startup</Link>
-            <a href="#pricing" className="hover:text-stone-100 transition-colors">Access</a>
-            <a href="#contact" className="hover:text-stone-100 transition-colors">Contact</a>
+          <div className="hidden items-center gap-5 font-mono text-[11px] uppercase tracking-[0.16em] text-stone-500 lg:flex">
+            {NAV_ITEMS.map((item) =>
+              item.href.startsWith("#") ? (
+                <a key={item.label} href={item.href} className="transition-all duration-200 hover:-translate-y-0.5 hover:text-stone-900">
+                  {item.label}
+                </a>
+              ) : (
+                <Link key={item.label} href={item.href} className="transition-all duration-200 hover:-translate-y-0.5 hover:text-stone-900">
+                  {item.label}
+                </Link>
+              )
+            )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="group inline-flex items-center gap-1.5 rounded-full border border-stone-300/70 bg-white/70 px-2.5 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-stone-600 opacity-85 transition-all duration-300 hover:opacity-100 hover:border-stone-400/70 hover:bg-white active:scale-95"
+              aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
+            >
+              <span className="relative flex h-3.5 w-3.5 items-center justify-center overflow-hidden">
+                <SunMedium className={`absolute h-3.5 w-3.5 transition-all duration-300 ${isLight ? "scale-100 rotate-0 opacity-100" : "scale-0 rotate-90 opacity-0"}`} />
+                <Moon className={`absolute h-3.5 w-3.5 transition-all duration-300 ${isLight ? "scale-0 -rotate-90 opacity-0" : "scale-100 rotate-0 opacity-100"}`} />
+              </span>
+              <span className="hidden sm:inline transition-transform duration-300 group-hover:translate-x-0.5">{isLight ? "Dark" : "Light"}</span>
+            </button>
             <Link
               href="/auth/login"
-              className="border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-black transition-colors hover:bg-white"
+              className="border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-black transition-all duration-300 hover:-translate-y-0.5 hover:bg-white"
             >
-              Get Key
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="text-xs font-bold uppercase tracking-[0.12em] text-stone-600 transition-colors hover:text-stone-300"
-            >
-              Sign up
+              Sign in
             </Link>
           </div>
         </div>
@@ -1182,22 +1248,22 @@ export default function HomePage() {
       </div>
 
       {/* ── Verification Console ────────────────────────────────────────────── */}
-      <section id="demo" className="aurel-reveal-section pt-20 pb-0">
+      <section id="demo" className="aurel-reveal-section px-4 pt-20 pb-20 md:px-6 lg:px-8">
         {/* Section header */}
-        <div className="mx-auto max-w-7xl px-5 pb-10 md:px-8">
-          <div className="grid gap-6 lg:grid-cols-[0.75fr_1fr] lg:items-end">
+        <div className="mx-auto max-w-7xl pb-6">
+          <div className="grid gap-5 rounded-[1.75rem] border border-stone-200/70 bg-white/70 px-5 py-6 shadow-[0_24px_80px_rgba(28,25,23,0.08)] backdrop-blur-sm lg:grid-cols-[0.75fr_1fr] lg:items-end md:px-6 md:py-7">
             <div>
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
+              <div className={`mb-3 font-mono text-[10px] uppercase tracking-[0.2em] ${demoMetaTone}`}>
                 Live console / no signup required
               </div>
-              <h2 className="text-3xl font-black uppercase tracking-tight text-stone-100 md:text-5xl">Action checkpoint</h2>
+              <h2 className={`text-3xl font-black uppercase tracking-tight ${demoTitleTone} md:text-5xl`}>Action checkpoint</h2>
             </div>
             <div className="flex items-end justify-between gap-6">
-              <p className="max-w-xl text-stone-400">
+              <p className={`max-w-xl ${demoBodyTone}`}>
                 Submit a financial action as the live example and watch the gate decide:
                 policy pass, behavior pressure, semantic intent, final verdict, signed audit.
               </p>
-              <div className="hidden flex-shrink-0 items-center gap-2 font-mono text-[10px] text-stone-600 lg:flex">
+              <div className={`hidden flex-shrink-0 items-center gap-2 font-mono text-[10px] ${demoMetaTone} lg:flex`}>
                 <span className="inline-block h-1.5 w-1.5 bg-emerald-500" />
                 <span>intent analyzer · online</span>
               </div>
@@ -1206,15 +1272,15 @@ export default function HomePage() {
         </div>
 
         {/* Console block — full width */}
-        <div className="aurel-surface-line border-y border-stone-800" style={{ background: "#080808" }}>
+        <div className="aurel-surface-line mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-stone-200/70 shadow-[0_30px_100px_rgba(28,25,23,0.12)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_36px_120px_rgba(28,25,23,0.16)]" style={consoleShellStyle}>
           {/* Desktop 3-column */}
           <div
-            className="hidden lg:grid h-[720px]"
+            className="hidden h-[720px] lg:grid"
             style={{ gridTemplateColumns: "30% 40% 30%" }}
           >
             {/* ── LEFT — Input ─────────────────────────────────────────────── */}
-            <div className="h-full border-r border-zinc-800 flex flex-col overflow-hidden" style={{ background: "#0a0a0a" }}>
-              <ColHeader>Verification Request</ColHeader>
+            <div className="flex h-full flex-col overflow-hidden border-r border-zinc-800" style={panelStyle("#0a0a0a", "#ffffff")}>
+              <ColHeader lightMode={isLight}>Verification Request</ColHeader>
               {/* Scrollable fields */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                 <div>
@@ -1286,7 +1352,7 @@ export default function HomePage() {
                 <div className="pb-1" />
               </div>
               {/* Sticky submit */}
-              <div className="flex-shrink-0 border-t border-zinc-800 p-4 pt-3 space-y-2" style={{ background: "#0a0a0a" }}>
+              <div className="flex-shrink-0 border-t border-zinc-800 p-4 pt-3 space-y-2" style={panelStyle("#0a0a0a", "#ffffff")}>
                 {consoleError && (
                   <div className="border border-red-900/60 bg-red-950/20 text-red-500 text-[10px] font-mono px-3 py-2 tracking-wide">
                     ERR: {consoleError}
@@ -1311,14 +1377,15 @@ export default function HomePage() {
             </div>
 
             {/* ── CENTER — Pipeline ─────────────────────────────────────────── */}
-            <div className="h-full border-r border-zinc-800 flex flex-col overflow-hidden" style={{ background: "#090909" }}>
+            <div className="flex h-full flex-col overflow-hidden border-r border-zinc-800" style={panelStyle("#090909", "#fbfaf8")}>
               <PipelineColHeader
                 label={showPipeline && pipelineTs ? `Analysis Pipeline — ${pipelineTs}` : "Analysis Pipeline"}
                 pipelineStatus={phase === "idle" ? "ready" : phase === "complete" ? "complete" : "processing"}
+                lightMode={isLight}
               />
               {/* Running micro-banner — sits between header and scrollable body */}
               {isRunning && (
-                <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-zinc-800/40" style={{ background: "#080808" }}>
+                <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-zinc-800/40" style={panelStyle("#080808", "#f5f1e8")}>
                   <span className="w-2.5 h-2.5 border border-zinc-700 border-t-stone-300 rounded-full animate-spin" />
                   <span className="text-[10px] font-mono tracking-widest uppercase text-stone-400/60 animate-pulse">
                     routing through security pipeline
@@ -1327,22 +1394,22 @@ export default function HomePage() {
               )}
               <div className="flex-1 overflow-y-auto p-4">
                 {!showPipeline ? (
-                  <GhostedPipeline />
+                  <GhostedPipeline lightMode={isLight} />
                 ) : (
                   <div className="space-y-5">
                     {showLayer1 && (
-                      <RulesLayer visible={showLayer1} result={result} dotStatus={layer1DotStatus()} />
+                      <RulesLayer visible={showLayer1} result={result} dotStatus={layer1DotStatus()} lightMode={isLight} />
                     )}
                     {showLayer2 && (
                       <>
                         <ConsoleDivider />
-                        <VelocityLayer visible={showLayer2} result={result} dotStatus={layer2DotStatus()} />
+                        <VelocityLayer visible={showLayer2} result={result} dotStatus={layer2DotStatus()} lightMode={isLight} />
                       </>
                     )}
                     {showLayer3 && (
                       <>
                         <ConsoleDivider />
-                        <SemanticLayer visible={showLayer3} result={result} streamedText={streamedText} phase={phase} />
+                        <SemanticLayer visible={showLayer3} result={result} streamedText={streamedText} phase={phase} lightMode={isLight} />
                       </>
                     )}
                   </div>
@@ -1351,11 +1418,11 @@ export default function HomePage() {
             </div>
 
             {/* ── RIGHT — Decision ──────────────────────────────────────────── */}
-            <div className="h-full flex flex-col overflow-hidden" style={{ background: "#0a0a0a" }}>
-              <ColHeader>Decision Record</ColHeader>
+            <div className="flex h-full flex-col overflow-hidden" style={panelStyle("#0a0a0a", "#ffffff")}>
+              <ColHeader lightMode={isLight}>Decision Record</ColHeader>
               <div className="flex-1 overflow-y-auto p-4">
                 {!showResult ? (
-                  <GhostedDecision computing={showPipeline && !showResult} />
+                  <GhostedDecision computing={showPipeline && !showResult} lightMode={isLight} />
                 ) : (
                   <div className="space-y-4 text-xs font-mono">
                     <div className="space-y-1.5">
@@ -1406,7 +1473,7 @@ export default function HomePage() {
                         />
                       </div>
                       {/* Risk score breakdown by layer */}
-                      <div className="border border-zinc-800/60 p-2.5 mb-2.5 text-[10px] font-mono" style={{ background: "#060606" }}>
+                      <div className="border border-zinc-800/60 p-2.5 mb-2.5 text-[10px] font-mono" style={panelStyle("#060606", "#faf6ef")}>
                         <div className="text-[9px] text-zinc-700 tracking-widest uppercase mb-1.5">risk score breakdown</div>
                         {(["rules", "velocity", "semantic"] as const).map((layer) => {
                           const val = result.risk_score_breakdown[`${layer}_contribution` as keyof typeof result.risk_score_breakdown] as number;
@@ -1474,14 +1541,14 @@ export default function HomePage() {
 
                     <div>
                       <FieldLabel>Audit Entry</FieldLabel>
-                      <div className="border border-zinc-800 p-3" style={{ background: "#070707" }}>
+                      <div className="border border-zinc-800 p-3" style={panelStyle("#070707", "#faf6ef")}>
                         <JsonBlock data={result.audit_entry} />
                       </div>
                     </div>
 
                     <ConsoleDivider />
 
-                    <RawResponseAccordion data={result} />
+                    <RawResponseAccordion data={result} lightMode={isLight} />
 
                     <div className="pb-4" />
                   </div>

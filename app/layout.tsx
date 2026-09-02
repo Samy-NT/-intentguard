@@ -116,15 +116,30 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     ],
   };
 
+  const themeBootstrap = `
+    (() => {
+      try {
+        const theme = localStorage.getItem('aurel-theme');
+        const isLight = theme !== 'dark';
+        document.documentElement.classList.toggle('aurel-light', isLight);
+        document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
+      } catch {
+        document.documentElement.classList.add('aurel-light');
+        document.documentElement.style.colorScheme = 'light';
+      }
+    })();
+  `;
+
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${orbitron.variable} aurel-bg aurel-light antialiased`}>{children}</body>
+      <body className={`${orbitron.variable} aurel-bg antialiased`}>{children}</body>
     </html>
   );
 }
