@@ -13,6 +13,9 @@ import { assertEnv } from "@/lib/env";
 import { recordLayerMetric, captureError } from "@/lib/monitoring";
 import { checkWorkspaceRateLimit } from "@/lib/ratelimit";
 import { AUDIT_SIGNATURE_VERSION, signAuditDecision } from "@/lib/audit";
+import { evaluateMandate, SignedMandateSchema } from "@/lib/mandates";
+import { getMissionScope } from "@/lib/payment-intent";
+import { evaluateWorkspaceEntitlements, normalizeWorkspaceStatus } from "@/lib/entitlements";
 import type { RuleDecision, VerifyResponse } from "@/types";
 
 const MAX_VERIFY_BODY_BYTES = 32_000;
@@ -27,6 +30,8 @@ const PaymentIntentSchema = z.object({
   recipient: z.string().min(1),
   merchant_id: z.string().optional(),
   agent_context: z.string().max(2000).optional(),
+  mission_scope: z.string().max(1000).optional(),
+  mandate: SignedMandateSchema.optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
@@ -64,7 +69,13 @@ export async function POST(req: NextRequest) {
 
   const intent = { ...parsed.data, workspace_id };
 
-  // 3. Idempotency — return cached decision for known intent_id
+  // 3. Workspace config and beta/billing entitlements
+  const wsConfig = await getWorkspaceConfig(intent.workspace_id, db);
+  if (normalizeWorkspaceStatus(wsConfig.policy?.workspace_status) === "suspended") {
+    return err("Workspace is suspended. Verification is disabled until access is restored.", 403);
+  }
+
+  // 4. Idempotency — return cached decision for known intent_id
   const { data: existing } = await db
     .from("verify_logs")
     .select("decision, risk_score, triggered_rule, audit_signature, audit_signature_version, created_at")
@@ -86,7 +97,12 @@ export async function POST(req: NextRequest) {
     return json(response);
   }
 
-  // 4. Run deterministic rule engine (5 s DB timeout)
+  const entitlement = await evaluateWorkspaceEntitlements(db, intent.workspace_id, wsConfig.policy);
+  if (!entitlement.allowed) {
+    return err(entitlement.reason, entitlement.status);
+  }
+
+  // 5. Run deterministic rule engine (5 s DB timeout)
   const rulesStart = performance.now();
   let engineResult;
   try {
@@ -109,10 +125,36 @@ export async function POST(req: NextRequest) {
   let finalReason = engineResult.reason;
   let finalRiskScore = engineResult.risk_score;
 
-  // 5. Fetch workspace config (policy + webhook) — single DB round trip
-  const wsConfig = await getWorkspaceConfig(intent.workspace_id, db);
+  // 6. Signed mandate — skip if rule engine already blocked
+  if (finalDecision !== "block" && intent.mandate) {
+    const mandateResult = evaluateMandate(intent, intent.mandate);
+    if (mandateResult) {
+      finalDecision = mandateResult.decision;
+      finalReason = mandateResult.reason;
+      finalRiskScore = Math.max(finalRiskScore, mandateResult.risk_score);
+    } else {
+      const { data: activeMandate, error: mandateError } = await db
+        .from("mandates")
+        .select("mandate_id, signature, revoked_at, expires_at")
+        .eq("workspace_id", intent.workspace_id)
+        .eq("mandate_id", intent.mandate.payload.mandate_id)
+        .is("revoked_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
 
-  // 5a. Operator policy — skip if rule engine already blocked
+      if (mandateError) {
+        finalDecision = "block";
+        finalReason = "Mandate registry lookup failed";
+        finalRiskScore = Math.max(finalRiskScore, 100);
+      } else if (!activeMandate || activeMandate.signature !== intent.mandate.signature.toLowerCase()) {
+        finalDecision = "block";
+        finalReason = "Mandate is not active in the workspace registry";
+        finalRiskScore = Math.max(finalRiskScore, 95);
+      }
+    }
+  }
+
+  // 7. Operator policy — skip if already blocked
   if (finalDecision !== "block" && wsConfig.policy) {
     const policyResult = evaluatePolicy(intent, wsConfig.policy);
     if (policyResult) {
@@ -122,7 +164,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 6. Semantic layer — only when agent_context is present and not already blocked
+  // 8. Semantic layer — only when agent_context is present and not already blocked
   if (intent.agent_context && finalDecision !== "block") {
     const semanticStart = performance.now();
     const semantic = await analyzeIntent({
@@ -131,6 +173,7 @@ export async function POST(req: NextRequest) {
       recipient: intent.recipient,
       merchant_id: intent.merchant_id,
       agent_context: intent.agent_context,
+      mission_scope: getMissionScope(intent),
     });
     recordLayerMetric({
       layer: "semantic",
@@ -158,7 +201,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 7. Webhook escalation — durable queue processed by /api/cron/webhooks
+  // 9. Webhook escalation — durable queue processed by /api/cron/webhooks
   if (wsConfig.webhook && shouldEscalate(finalDecision, finalRiskScore, wsConfig.webhook, intent.amount)) {
     const queued = await enqueueWebhookJob(db, {
       workspace_id: intent.workspace_id,
@@ -184,7 +227,7 @@ export async function POST(req: NextRequest) {
     if (queued.error) console.error("[webhook] Failed to queue delivery:", queued.error);
   }
 
-  // 8. Persist signed audit log before returning so idempotency and velocity remain reliable.
+  // 10. Persist signed audit log before returning so idempotency and velocity remain reliable.
   const evaluatedAt = new Date().toISOString();
   const auditRecord = {
     workspace_id: intent.workspace_id,
@@ -210,6 +253,7 @@ export async function POST(req: NextRequest) {
           agent_id: auditRecord.agent_id,
           recipient: auditRecord.recipient,
           merchant_id: auditRecord.merchant_id,
+          mandate_id: intent.mandate?.payload.mandate_id ?? null,
           amount: intent.amount,
           currency: auditRecord.currency,
           agent_context: intent.agent_context ?? null,
@@ -236,7 +280,7 @@ export async function POST(req: NextRequest) {
     return err("Audit log service unavailable", 503);
   }
 
-  // 9. Return verdict
+  // 11. Return verdict
   const response: VerifyResponse = {
     decision: finalDecision,
     reason: finalReason,

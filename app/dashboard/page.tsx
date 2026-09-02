@@ -4,7 +4,20 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { apiKeyHeaders, getStoredApiKey, storeApiKey } from "./api-key";
 import { Sidebar } from "@/app/components/Sidebar";
-import { Pencil, Inbox, Search, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  Inbox,
+  Pencil,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  ShieldX,
+  Siren,
+  Split,
+} from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -13,6 +26,7 @@ interface LogEntry {
   intent_id: string;
   agent_id: string;
   recipient: string;
+  merchant_id?: string | null;
   amount: number;
   currency: string;
   decision: "allow" | "block" | "flag";
@@ -138,6 +152,10 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function formatMoney(amount: number, currency: string) {
+  return `${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+}
+
 function ruleValueDisplay(cfg: RuleConfig, settings: WorkspaceSettings): string {
   const val = settings[cfg.key];
   if (cfg.type === "boolean") return (val as boolean) ? "On" : "Off";
@@ -153,6 +171,38 @@ function periodCutoff(period: PeriodFilter): Date | null {
   if (period === "all") return null;
   const ms = { "1h": 3600_000, "24h": 86400_000, "7d": 604800_000, "30d": 2592000_000 }[period];
   return new Date(Date.now() - ms);
+}
+
+function escapeCsv(value: string | number | null | undefined) {
+  const str = String(value ?? "");
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function exportLogsCsv(logs: LogEntry[]) {
+  const columns: (keyof LogEntry)[] = [
+    "created_at",
+    "intent_id",
+    "agent_id",
+    "recipient",
+    "amount",
+    "currency",
+    "decision",
+    "risk_score",
+    "triggered_rule",
+    "review_status",
+    "audit_signature_version",
+  ];
+  const csv = [
+    columns.join(","),
+    ...logs.map((log) => columns.map((key) => escapeCsv(log[key])).join(",")),
+  ].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `aurel-dashboard-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Decision styles ───────────────────────────────────────────────────────────
@@ -184,6 +234,168 @@ function DecisionBadge({ decision }: { decision: LogEntry["decision"] }) {
       <span className={`w-1.5 h-1.5  ${s.dot}`} />
       {s.label}
     </span>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  detail,
+  tone,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+  tone: "neutral" | "good" | "warn" | "bad";
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  const toneClasses = {
+    neutral: "text-stone-100 border-stone-700/70 bg-stone-100/5",
+    good: "text-emerald-300 border-emerald-500/30 bg-emerald-500/10",
+    warn: "text-amber-300 border-amber-500/30 bg-amber-500/10",
+    bad: "text-red-300 border-red-500/30 bg-red-500/10",
+  };
+
+  return (
+    <div className="aurel-panel p-5 min-h-32">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3">{label}</div>
+          <div className={`text-3xl font-bold tabular-nums ${toneClasses[tone].split(" ")[0]}`}>
+            {value}
+          </div>
+        </div>
+        <span className={`inline-flex h-9 w-9 items-center justify-center border ${toneClasses[tone]}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <div className="mt-3 text-xs text-zinc-600 leading-relaxed">{detail}</div>
+    </div>
+  );
+}
+
+function DecisionMix({
+  total,
+  allowed,
+  blocked,
+  flagged,
+}: {
+  total: number;
+  allowed: number;
+  blocked: number;
+  flagged: number;
+}) {
+  const segments = [
+    { label: "Allowed", value: allowed, color: "bg-emerald-400", text: "text-emerald-300" },
+    { label: "Blocked", value: blocked, color: "bg-red-400", text: "text-red-300" },
+    { label: "Flagged", value: flagged, color: "bg-amber-400", text: "text-amber-300" },
+  ];
+
+  return (
+    <div className="aurel-panel p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-white">Decision Mix</h2>
+          <p className="mt-0.5 text-xs text-zinc-500">Share of current workspace checks</p>
+        </div>
+        <Split className="h-4 w-4 text-stone-500" />
+      </div>
+      <div className="mt-5 h-2 w-full overflow-hidden bg-zinc-900">
+        {total === 0 ? (
+          <div className="h-full w-full bg-zinc-800" />
+        ) : (
+          <div className="flex h-full">
+            {segments.map((segment) => (
+              <div
+                key={segment.label}
+                className={segment.color}
+                style={{ width: `${Math.max(0, (segment.value / total) * 100)}%` }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {segments.map((segment) => (
+          <div key={segment.label} className="border border-stone-800 bg-black/30 px-3 py-2">
+            <div className={`text-sm font-semibold tabular-nums ${segment.text}`}>{segment.value}</div>
+            <div className="text-[10px] uppercase tracking-wider text-zinc-600">{segment.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OperationsPanel({
+  pendingReviews,
+  signedLogs,
+  total,
+  failedWebhooks,
+  topRisk,
+  lastRefresh,
+}: {
+  pendingReviews: number;
+  signedLogs: number;
+  total: number;
+  failedWebhooks: number;
+  topRisk: LogEntry | null;
+  lastRefresh: Date | null;
+}) {
+  const auditCoverage = total ? Math.round((signedLogs / total) * 100) : 0;
+  const items = [
+    {
+      label: "Review queue",
+      value: pendingReviews ? `${pendingReviews} pending` : "Clear",
+      tone: pendingReviews ? "text-amber-300" : "text-emerald-300",
+    },
+    {
+      label: "Audit coverage",
+      value: `${auditCoverage}% signed`,
+      tone: auditCoverage >= 90 || total === 0 ? "text-emerald-300" : "text-amber-300",
+    },
+    {
+      label: "Webhook failures",
+      value: failedWebhooks ? `${failedWebhooks} need retry` : "Healthy",
+      tone: failedWebhooks ? "text-red-300" : "text-emerald-300",
+    },
+    {
+      label: "Last refresh",
+      value: lastRefresh ? formatTime(lastRefresh.toISOString()) : "Waiting",
+      tone: "text-stone-300",
+    },
+  ];
+
+  return (
+    <div className="aurel-panel p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-white">Operations</h2>
+          <p className="mt-0.5 text-xs text-zinc-500">What needs attention now</p>
+        </div>
+        <Activity className="h-4 w-4 text-stone-500" />
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center justify-between gap-3 border border-stone-800 bg-black/30 px-3 py-2.5">
+            <span className="text-xs text-zinc-500">{item.label}</span>
+            <span className={`text-xs font-semibold ${item.tone}`}>{item.value}</span>
+          </div>
+        ))}
+      </div>
+      {topRisk && (
+        <div className="mt-4 border border-red-500/20 bg-red-500/5 p-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-red-300">
+            <Siren className="h-3.5 w-3.5" />
+            Highest risk: {topRisk.risk_score}/100
+          </div>
+          <div className="mt-2 text-xs text-zinc-500">
+            {topRisk.agent_id} → {topRisk.recipient} · {formatMoney(topRisk.amount, topRisk.currency)}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -440,10 +652,12 @@ function TriggeredRuleModal({
 function ActiveRulesPanel({
   settings,
   loading,
+  hasApiKey,
   onEdit,
 }: {
   settings: WorkspaceSettings | null;
   loading: boolean;
+  hasApiKey: boolean;
   onEdit: (cfg: RuleConfig) => void;
 }) {
   return (
@@ -456,7 +670,11 @@ function ActiveRulesPanel({
         <span className="w-2 h-2  bg-emerald-500 animate-pulse" />
       </div>
 
-      {loading ? (
+      {!hasApiKey ? (
+        <div className="py-8 px-5 text-center text-zinc-600 text-xs">
+          Add an API key to load workspace rules
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center py-10 text-zinc-600 text-xs gap-2">
           <span className="w-3.5 h-3.5 border-2 border-zinc-700 border-t-zinc-400  animate-spin" />
           Loading rules…
@@ -501,10 +719,12 @@ function ActiveRulesPanel({
 function WebhookJobsPanel({
   jobs,
   loading,
+  hasApiKey,
   onRetry,
 }: {
   jobs: WebhookJob[];
   loading: boolean;
+  hasApiKey: boolean;
   onRetry: (id: string) => void;
 }) {
   const statusColor = {
@@ -520,7 +740,9 @@ function WebhookJobsPanel({
         <h2 className="font-semibold text-sm text-white">Webhook Jobs</h2>
         <p className="text-[11px] text-zinc-500 mt-0.5">Retry queue and delivery state</p>
       </div>
-      {loading ? (
+      {!hasApiKey ? (
+        <div className="py-8 px-5 text-center text-zinc-600 text-xs">Add an API key to inspect jobs</div>
+      ) : loading ? (
         <div className="py-8 px-5 text-center text-zinc-600 text-xs">Loading jobs...</div>
       ) : jobs.length === 0 ? (
         <div className="py-8 px-5 text-center text-zinc-600 text-xs">No webhook jobs yet</div>
@@ -639,15 +861,15 @@ function FilterBar({
         </select>
 
         {/* Search */}
-        <div className="flex items-center gap-2 flex-1 min-w-[180px] max-w-sm">
+        <div className="flex items-center gap-2 flex-1 min-w-[220px]">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 text-xs">⌕</span>
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-600" />
             <input
               type="text"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search intent_id, agent, recipient…"
-              className="w-full bg-zinc-800 border border-zinc-700  pl-7 pr-3 py-1.5 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors"
+              className="w-full bg-zinc-800 border border-zinc-700  pl-8 pr-3 py-1.5 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors"
             />
             {search && (
               <button
@@ -749,13 +971,13 @@ function ActiveFilterBadges({
 export default function DashboardPage() {
   // ── Data state ──────────────────────────────────────────────────────────────
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<WorkspaceSettings | null>(null);
-  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const [webhookJobs, setWebhookJobs] = useState<WebhookJob[]>([]);
-  const [webhookJobsLoading, setWebhookJobsLoading] = useState(true);
+  const [webhookJobsLoading, setWebhookJobsLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [verifyingAuditId, setVerifyingAuditId] = useState<string | null>(null);
 
@@ -778,7 +1000,7 @@ export default function DashboardPage() {
   // ── Data fetching ───────────────────────────────────────────────────────────
   const fetchLogs = useCallback(async (silent = false) => {
     if (!apiKey.trim()) {
-      setError("Enter an API key to load workspace logs");
+      setError(null);
       setLogs([]);
       setLoading(false);
       return;
@@ -804,13 +1026,18 @@ export default function DashboardPage() {
 
   const fetchSettings = useCallback(async () => {
     if (!apiKey.trim()) {
+      setSettings(null);
       setSettingsLoading(false);
       return;
     }
 
+    setSettingsLoading(true);
     try {
       const res = await fetch("/api/v1/workspace/settings", { headers: apiKeyHeaders(apiKey) });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setSettings(null);
+        return;
+      }
       const { settings } = await res.json();
       if (settings) setSettings({ ...DEFAULT_SETTINGS, ...settings });
     } catch {
@@ -820,15 +1047,20 @@ export default function DashboardPage() {
     }
   }, [apiKey]);
 
-  const fetchWebhookJobs = useCallback(async () => {
+  const fetchWebhookJobs = useCallback(async (silent = false) => {
     if (!apiKey.trim()) {
+      setWebhookJobs([]);
       setWebhookJobsLoading(false);
       return;
     }
 
+    if (!silent) setWebhookJobsLoading(true);
     try {
       const res = await fetch("/api/v1/workspace/webhook-jobs", { headers: apiKeyHeaders(apiKey) });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setWebhookJobs([]);
+        return;
+      }
       const { jobs } = await res.json();
       setWebhookJobs(jobs ?? []);
     } finally {
@@ -846,7 +1078,7 @@ export default function DashboardPage() {
     fetchWebhookJobs();
     const interval = setInterval(() => {
       fetchLogs(true);
-      fetchWebhookJobs();
+      fetchWebhookJobs(true);
     }, 5000);
     return () => clearInterval(interval);
   }, [fetchLogs, fetchSettings, fetchWebhookJobs]);
@@ -882,6 +1114,15 @@ export default function DashboardPage() {
   const allowed = logs.filter((l) => l.decision === "allow").length;
   const blocked = logs.filter((l) => l.decision === "block").length;
   const flagged = logs.filter((l) => l.decision === "flag").length;
+  const pendingReviews = logs.filter((l) => l.review_status === "pending").length;
+  const signedLogs = logs.filter((l) => Boolean(l.audit_signature)).length;
+  const failedWebhooks = webhookJobs.filter((job) => job.status === "failed" || job.status === "blocked").length;
+  const totalAmount = logs.reduce((sum, log) => sum + log.amount, 0);
+  const topRisk = logs.reduce<LogEntry | null>(
+    (current, log) => (!current || log.risk_score > current.risk_score ? log : current),
+    null
+  );
+  const blockRate = total ? Math.round(((blocked + flagged) / total) * 100) : 0;
 
   // ── Settings save ───────────────────────────────────────────────────────────
   async function handleSaveRule(
@@ -970,17 +1211,21 @@ export default function DashboardPage() {
     <div className="flex min-h-screen aurel-bg">
       <Sidebar />
       
-      <main className="flex-1 ml-64">
+      <main className="flex-1 lg:ml-64">
         {/* ── Header ─────────────────────────────────── */}
         <header className="border-b border-stone-800/60 bg-black/80 backdrop-blur-sm sticky top-0 z-40">
-          <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-600">Intent Guard</p>
+                <h1 className="mt-1 text-xl font-semibold text-white">Command Dashboard</h1>
+              </div>
               <nav className="hidden sm:flex items-center gap-1">
                 <Link href="/dashboard" className="text-sm text-white bg-zinc-800 px-3 py-1.5 ">Logs</Link>
                 <Link href="/dashboard/settings" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5  hover:bg-stone-950">Settings</Link>
               </nav>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <input
                 type="password"
                 value={apiKey}
@@ -989,7 +1234,7 @@ export default function DashboardPage() {
                   storeApiKey(e.target.value);
                 }}
                 placeholder="API key"
-                className="w-44 bg-zinc-900 border border-stone-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-1.5  focus:outline-none focus:ring-2 focus:ring-stone-400/20"
+                className="w-full sm:w-56 bg-zinc-900 border border-stone-800 text-zinc-300 placeholder-zinc-600 text-xs px-3 py-2  focus:outline-none focus:ring-2 focus:ring-stone-400/20"
               />
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <span className="w-1.5 h-1.5  bg-emerald-400 animate-pulse" />
@@ -1002,30 +1247,68 @@ export default function DashboardPage() {
               )}
               <button
                 onClick={() => fetchLogs()}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 "
+                className="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors bg-zinc-800 hover:bg-zinc-700 px-3 py-2 "
               >
+                <RefreshCw className="h-3.5 w-3.5" />
                 Refresh
+              </button>
+              <button
+                type="button"
+                onClick={() => exportLogsCsv(filteredLogs)}
+                disabled={filteredLogs.length === 0}
+                className="inline-flex items-center gap-2 text-xs text-black disabled:text-zinc-600 bg-stone-100 hover:bg-white disabled:bg-zinc-800 disabled:cursor-not-allowed px-3 py-2 transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                CSV
               </button>
             </div>
           </div>
         </header>
 
-        <div className="max-w-screen-xl mx-auto px-6 py-8">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-8">
           {/* ── Stats ────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Total Checks", value: total, color: "text-white" },
-            { label: "Allowed", value: allowed, color: "text-emerald-400", pct: total ? Math.round((allowed / total) * 100) : 0 },
-            { label: "Blocked", value: blocked, color: "text-red-400", pct: total ? Math.round((blocked / total) * 100) : 0 },
-            { label: "Flagged", value: flagged, color: "text-amber-400", pct: total ? Math.round((flagged / total) * 100) : 0 },
-          ].map((s) => (
-            <div key={s.label} className="aurel-panel p-5">
-              <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">{s.label}</div>
-              <div className={`text-3xl font-bold ${s.color}`}>{s.value}</div>
-              {"pct" in s && <div className="text-xs text-zinc-600 mt-1">{s.pct}% of total</div>}
-            </div>
-          ))}
-        </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+            <StatCard
+              label="Total checks"
+              value={total}
+              detail={`${filteredLogs.length} visible after filters`}
+              tone="neutral"
+              icon={Activity}
+            />
+            <StatCard
+              label="Allowed"
+              value={allowed}
+              detail={`${total ? Math.round((allowed / total) * 100) : 0}% passed without intervention`}
+              tone="good"
+              icon={CheckCircle2}
+            />
+            <StatCard
+              label="Blocked / flagged"
+              value={blocked + flagged}
+              detail={`${blockRate}% routed to protection or review`}
+              tone={blocked + flagged ? "warn" : "good"}
+              icon={blocked + flagged ? AlertTriangle : ShieldCheck}
+            />
+            <StatCard
+              label="Total volume"
+              value={`$${Math.round(totalAmount).toLocaleString()}`}
+              detail={topRisk ? `Top risk: ${formatMoney(topRisk.amount, topRisk.currency)}` : "No volume yet"}
+              tone={topRisk && topRisk.risk_score >= 75 ? "bad" : "neutral"}
+              icon={ShieldX}
+            />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px] mb-6">
+            <DecisionMix total={total} allowed={allowed} blocked={blocked} flagged={flagged} />
+            <OperationsPanel
+              pendingReviews={pendingReviews}
+              signedLogs={signedLogs}
+              total={total}
+              failedWebhooks={failedWebhooks}
+              topRisk={topRisk}
+              lastRefresh={lastRefresh}
+            />
+          </div>
 
         {/* ── Error ────────────────────────────────── */}
         {error && (
@@ -1088,11 +1371,17 @@ export default function DashboardPage() {
                   {total === 0 ? (
                     <>
                       <Inbox className="w-8 h-8 text-zinc-500 mb-1" />
-                      <p>No verifications yet.</p>
-                      <p className="text-xs text-zinc-700">
-                        Send a request to{" "}
-                        <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">POST /api/verify</code>
-                        {" "}to see logs here.
+                      <p>{apiKey.trim() ? "No verifications yet." : "Add an API key to load workspace logs."}</p>
+                      <p className="max-w-md text-center text-xs text-zinc-700">
+                        {apiKey.trim() ? (
+                          <>
+                            Send a request to{" "}
+                            <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">POST /api/verify</code>
+                            {" "}to see logs here.
+                          </>
+                        ) : (
+                          "Use a workspace key from API Keys, then the dashboard will refresh automatically."
+                        )}
                       </p>
                     </>
                   ) : (
@@ -1147,9 +1436,7 @@ export default function DashboardPage() {
                             <span className="text-stone-400 text-xs">{log.agent_id}</span>
                           </td>
                           <td className="px-5 py-4 text-right font-mono font-medium whitespace-nowrap">
-                            <span className="text-white">
-                              {log.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
+                            <span className="text-white">{formatMoney(log.amount, log.currency).split(" ")[0]}</span>
                             <span className="text-zinc-600 text-xs ml-1">{log.currency}</span>
                           </td>
                           <td className="px-5 py-4 hidden lg:table-cell">
@@ -1178,7 +1465,7 @@ export default function DashboardPage() {
                                 type="button"
                                 onClick={() => verifyAuditLog(log)}
                                 disabled={verifyingAuditId === log.id}
-                                className="mr-2 inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-emerald-500 hover:text-emerald-300 transition-colors border border-emerald-500/20 hover:border-emerald-500/50 px-2.5 py-1.5  opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                                className="mr-2 inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-emerald-500 hover:text-emerald-300 transition-colors border border-emerald-500/20 hover:border-emerald-500/50 px-2.5 py-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 disabled:opacity-50"
                                 title="Verify audit signature"
                               >
                                 <ShieldCheck className="w-3 h-3" />
@@ -1189,13 +1476,13 @@ export default function DashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => setTriggeredLog(log)}
-                                className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-amber-400 transition-colors border border-stone-800 hover:border-amber-500/40 px-2.5 py-1.5  opacity-0 group-hover:opacity-100"
+                                className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-amber-400 transition-colors border border-stone-800 hover:border-amber-500/40 px-2.5 py-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               >
                                 View rule
                               </button>
                             )}
                             {log.review_status === "pending" && (
-                              <div className="mt-2 flex justify-end gap-1 opacity-0 group-hover:opacity-100">
+                              <div className="mt-2 flex justify-end gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
                                 <button
                                   type="button"
                                   onClick={() => reviewLog(log.id, "approved")}
@@ -1231,11 +1518,13 @@ export default function DashboardPage() {
             <ActiveRulesPanel
               settings={settings}
               loading={settingsLoading}
+              hasApiKey={Boolean(apiKey.trim())}
               onEdit={setEditRuleCfg}
             />
             <WebhookJobsPanel
               jobs={webhookJobs}
               loading={webhookJobsLoading}
+              hasApiKey={Boolean(apiKey.trim())}
               onRetry={retryWebhookJob}
             />
           </div>

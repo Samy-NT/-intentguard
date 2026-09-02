@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import Image from "next/image";
 import { Activity, FileCheck2, Shield } from "lucide-react";
 import { HeroSceneFallback } from "@/app/components/hero/HeroSceneFallback";
 import type {
@@ -1071,9 +1072,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center border border-stone-700 bg-stone-100">
-              <img src="/logo.png" alt="Aurel" className="h-6 w-6" />
+              <Image src="/logo.png" alt="Aurels" width={24} height={24} className="h-6 w-6" />
             </span>
-            <span className="font-mono text-sm font-semibold uppercase tracking-[0.24em]">Aurel</span>
+            <span className="font-mono text-sm font-semibold uppercase tracking-[0.24em]">Aurels</span>
           </div>
           <div className="hidden lg:flex items-center gap-6 text-[11px] text-stone-500 font-mono uppercase tracking-[0.16em]">
             <a href="#features" className="hover:text-stone-100 transition-colors">Layers</a>
@@ -1082,6 +1083,7 @@ export default function HomePage() {
             <Link href="/api-reference" className="hover:text-stone-100 transition-colors">API</Link>
             <Link href="/use-cases" className="hover:text-stone-100 transition-colors">Use cases</Link>
             <Link href="/benchmark" className="hover:text-stone-100 transition-colors">Benchmark</Link>
+            <Link href="/plugins" className="hover:text-stone-100 transition-colors">Plugins</Link>
             <a href="#pricing" className="hover:text-stone-100 transition-colors">Access</a>
             <a href="#contact" className="hover:text-stone-100 transition-colors">Contact</a>
             <Link href="/dashboard" className="hover:text-stone-100 transition-colors text-stone-600">Dashboard</Link>
@@ -1110,7 +1112,7 @@ export default function HomePage() {
               Secure intent before decision passes.
             </h1>
             <p className="aurel-reveal aurel-delay-2 mt-8 max-w-2xl text-lg leading-8 text-stone-400 md:text-xl">
-              Aurel is the intent firewall for autonomous actions: policy,
+              Aurels is the intent firewall for autonomous actions: policy,
               behavior, semantic intent, and a signed audit record before an
               agent can execute high-consequence work.
             </p>
@@ -1517,7 +1519,7 @@ export default function HomePage() {
               </h2>
             </div>
             <p className="max-w-2xl text-lg leading-8 text-stone-400">
-              Aurel treats agent intent as infrastructure, not content moderation.
+              Aurels treats agent intent as infrastructure, not content moderation.
               The system checks what the agent is doing, whether it is allowed, and
               whether the record can be trusted later.
             </p>
@@ -1560,7 +1562,7 @@ export default function HomePage() {
                 One call. One verdict.
               </h2>
               <p className="mb-8 leading-8 text-stone-400">
-                Send the action details and execution trace. Aurel evaluates
+                Send the action details and execution trace. Aurels evaluates
                 deterministic rules first, checks behavior, analyzes intent, and returns
                 a verdict the runtime can obey.
               </p>
@@ -1676,7 +1678,7 @@ export default function HomePage() {
             <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-600">
               Contact
             </div>
-            <h2 className="text-4xl font-black uppercase tracking-tight text-stone-100 md:text-6xl">Put Aurel before the action.</h2>
+            <h2 className="text-4xl font-black uppercase tracking-tight text-stone-100 md:text-6xl">Put Aurels before the action.</h2>
           </div>
           <div>
             <p className="mb-8 max-w-xl text-lg leading-8 text-stone-400">
@@ -1684,10 +1686,10 @@ export default function HomePage() {
               deployment. We respond within one business day.
             </p>
             <a
-              href="mailto:contact@aurel.io?subject=API Access Request"
+              href="mailto:aurels.dev@gmail.com?subject=API Access Request"
               className="aurel-action aurel-action-light inline-flex items-center gap-3 border border-stone-100 bg-stone-100 px-8 py-4 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
             >
-              contact@aurel.io
+              aurels.dev@gmail.com
               <span aria-hidden>→</span>
             </a>
             <p className="mt-6 font-mono text-xs text-stone-600">
@@ -1702,9 +1704,9 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.14em] text-stone-600 sm:flex-row">
           <div className="flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center border border-stone-800 bg-stone-100">
-              <img src="/logo.png" alt="Aurel" className="h-4 w-4" />
+              <Image src="/logo.png" alt="Aurels" width={16} height={16} className="h-4 w-4" />
             </span>
-            <span>Aurel</span>
+            <span>Aurels</span>
           </div>
           <span>The intent firewall for autonomous actions</span>
           <div className="flex items-center gap-4">
@@ -1712,6 +1714,7 @@ export default function HomePage() {
             <Link href="/docs" className="transition-colors hover:text-stone-300">Docs</Link>
             <Link href="/security" className="transition-colors hover:text-stone-300">Security</Link>
             <Link href="/benchmark" className="transition-colors hover:text-stone-300">Benchmark</Link>
+            <Link href="/plugins" className="transition-colors hover:text-stone-300">Plugins</Link>
             <Link href="/dashboard" className="transition-colors hover:text-stone-300">Dashboard</Link>
           </div>
         </div>

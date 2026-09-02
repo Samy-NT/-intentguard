@@ -157,3 +157,33 @@ export async function checkWorkspaceRateLimit(
     resetAt: entry.resetAt,
   };
 }
+
+export async function checkLoginRateLimit(
+  identifier: string,
+  limit = 20,
+  windowMs = 10 * 60_000
+): Promise<RateLimitResult> {
+  const limiter = getNamedRedisLimiter("ig:login:rl", limit, "10 m");
+
+  if (limiter) {
+    try {
+      const result = await limiter.limit(identifier);
+      return {
+        allowed: result.success,
+        remaining: result.remaining,
+        resetAt: result.reset,
+      };
+    } catch (e) {
+      console.warn("[ratelimit] Redis error, falling back to memory:", e);
+    }
+  }
+
+  const key = `login:${identifier}`;
+  const allowed = memoryRateLimit(key, limit, windowMs);
+  const entry = memoryStore.get(key)!;
+  return {
+    allowed,
+    remaining: allowed ? limit - entry.count : 0,
+    resetAt: entry.resetAt,
+  };
+}

@@ -1,17 +1,17 @@
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://aurel.io";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://aurels.dev";
 
 export const AUREL = {
-  name: "Aurel",
-  legalName: "Aurel",
+  name: "Aurels",
+  legalName: "Aurels",
   tagline: "The intent firewall for autonomous actions",
   description:
-    "Aurel is a runtime intent firewall for autonomous actions. It secures the intent before a decision passes, blocking prompt injections, mission drift, suspicious provenance, and policy violations before agents execute high-consequence work.",
+    "Aurels is a runtime intent firewall for autonomous actions. It secures the intent before a decision passes, blocking prompt injections, mission drift, suspicious provenance, and policy violations before agents execute high-consequence work.",
   shortDescription:
     "Runtime intent firewall that verifies autonomous action intent before execution.",
-  email: "contact@aurel.io",
+  email: "aurels.dev@gmail.com",
   github: "https://github.com/Samy-NT/intentguard",
   keywords: [
-    "Aurel",
+    "Aurels",
     "autonomous actions",
     "AI agent security",
     "intent firewall",
@@ -36,6 +36,7 @@ export const publicRoutes = [
   { path: "/api-reference", priority: 0.9, changeFrequency: "weekly" },
   { path: "/security", priority: 0.9, changeFrequency: "monthly" },
   { path: "/benchmark", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/plugins", priority: 0.88, changeFrequency: "weekly" },
   { path: "/use-cases", priority: 0.85, changeFrequency: "monthly" },
   { path: "/docs", priority: 0.8, changeFrequency: "weekly" },
 ] as const;

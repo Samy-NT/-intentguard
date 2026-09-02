@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Use a free 'tech' font (Orbitron) loaded via layout.tsx head link */
+/* Use a free 'tech' font (Orbitron) loaded via next/font in layout.tsx */
 
 @layer base {
   body {
@@ -786,7 +786,7 @@
 
 /* Hero heading: use Orbitron (free Google Font) and slightly reduce size */
 .aurel-hero h1 {
-  font-family: 'Orbitron', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+  font-family: var(--font-orbitron), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
   /* slightly smaller than the previous tailwind sizes; responsive via clamp */
   font-size: clamp(2.8rem, 9.6vw, 5.2rem) !important;
   line-height: 0.92 !important;
@@ -804,7 +804,7 @@
     /* Hero copy: use Orbitron and slightly reduce paragraph size */
     .aurel-hero-copy,
     .aurel-hero p {
-      font-family: 'Orbitron', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+      font-family: var(--font-orbitron), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
     }
 
     .aurel-hero p {

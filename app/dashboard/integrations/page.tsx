@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, CheckCircle2, PlugZap, RefreshCw, Terminal, Webhook } from "lucide-react";
+import { AlertTriangle, BookOpen, CheckCircle2, PlugZap, RefreshCw, Terminal, Webhook } from "lucide-react";
 import { Sidebar } from "@/app/components/Sidebar";
 import { apiKeyHeaders, getStoredApiKey, storeApiKey } from "@/app/dashboard/api-key";
 
@@ -37,6 +37,49 @@ interface WebhookDelivery {
   http_status: number | null;
   error: string | null;
   created_at: string;
+}
+
+interface OpsStatus {
+  status: "ok" | "warn" | "fail";
+  generated_at: string;
+  checks: Array<{ name: string; status: "ok" | "warn" | "fail"; detail: string }>;
+  webhooks: {
+    configured: boolean;
+    pending: number;
+    due: number;
+    failed: number;
+    blocked: number;
+    delivered: number;
+    oldest_pending_age_seconds: number | null;
+    latest_delivery_at: string | null;
+    latest_delivery_status: "blocked" | "delivered" | "failed" | null;
+  };
+  siem: {
+    configured: boolean;
+    nightly_export_enabled: boolean;
+  };
+  verification: {
+    last_24h: number;
+    flagged_pending: number;
+    blocked_last_24h: number;
+  };
+  sla: {
+    window_hours: number;
+    target_success_rate: number;
+    webhook_attempts: number;
+    webhook_failures: number;
+    webhook_success_rate: number | null;
+    error_budget_burn_percent: number | null;
+    max_pending_age_seconds: number | null;
+    backlog_due: number;
+  };
+  alerts: {
+    severity: "none" | "warning" | "critical";
+    routing_configured: boolean;
+    channels: string[];
+    reasons: string[];
+    recommended_actions: string[];
+  };
 }
 
 const SDK_SNIPPET = `import { createIntentGuardClient } from "intentguard/sdk";
@@ -82,6 +125,24 @@ function statusClass(status: string) {
   return "border-red-500/25 bg-red-500/10 text-red-300";
 }
 
+function opsStatusClass(status: "ok" | "warn" | "fail") {
+  if (status === "ok") return "border-emerald-500/25 bg-emerald-500/10 text-emerald-300";
+  if (status === "warn") return "border-amber-500/25 bg-amber-500/10 text-amber-300";
+  return "border-red-500/25 bg-red-500/10 text-red-300";
+}
+
+function formatAge(seconds: number | null) {
+  if (seconds === null) return "-";
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${Math.round(seconds / 3600)}h`;
+}
+
+function formatPercent(value: number | null) {
+  if (value === null) return "-";
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
 function SnippetCard({ title, description, code }: { title: string; description: string; code: string }) {
   return (
     <div className="border border-stone-800 bg-zinc-900/60">
@@ -106,6 +167,7 @@ export default function IntegrationsPage() {
   const [siemSecret, setSiemSecret] = useState("");
   const [jobs, setJobs] = useState<WebhookJob[]>([]);
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
+  const [opsStatus, setOpsStatus] = useState<OpsStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,15 +185,17 @@ export default function IntegrationsPage() {
     }
 
     setLoading(true);
-    const [settingsRes, jobsRes, deliveriesRes] = await Promise.all([
+    const [settingsRes, jobsRes, deliveriesRes, opsRes] = await Promise.all([
       fetch("/api/v1/workspace/settings", { headers: apiKeyHeaders(apiKey) }),
       fetch("/api/v1/workspace/webhook-jobs", { headers: apiKeyHeaders(apiKey) }),
       fetch("/api/v1/workspace/webhook-deliveries", { headers: apiKeyHeaders(apiKey) }),
+      fetch("/api/v1/workspace/ops-status", { headers: apiKeyHeaders(apiKey) }),
     ]);
 
     const settingsData = await settingsRes.json().catch(() => ({}));
     const jobsData = await jobsRes.json().catch(() => ({}));
     const deliveriesData = await deliveriesRes.json().catch(() => ({}));
+    const opsData = await opsRes.json().catch(() => ({}));
     setLoading(false);
 
     if (!settingsRes.ok) {
@@ -148,6 +212,7 @@ export default function IntegrationsPage() {
     setSiemSecret(nextSettings.siem_secret_configured ? "********" : "");
     setJobs(jobsRes.ok ? jobsData.jobs ?? [] : []);
     setDeliveries(deliveriesRes.ok ? deliveriesData.deliveries ?? [] : []);
+    setOpsStatus(opsRes.ok || opsRes.status === 503 ? opsData : null);
     setError(null);
   }
 
@@ -212,7 +277,7 @@ export default function IntegrationsPage() {
               </div>
               <h1 className="text-3xl font-semibold tracking-tight">Integrations</h1>
               <p className="mt-2 text-sm text-stone-400">
-                Connect Aurel to agent frameworks, webhooks, SIEM exports, and operational alerting.
+                Connect Aurels to agent frameworks, webhooks, SIEM exports, and operational alerting.
               </p>
             </div>
             <input
@@ -232,6 +297,112 @@ export default function IntegrationsPage() {
             <div className="fixed bottom-6 right-6 z-50 border border-emerald-500/30 bg-emerald-500/15 px-4 py-3 text-sm text-emerald-300">
               {toast}
             </div>
+          )}
+
+          {opsStatus && (
+            <section className="border border-stone-800 bg-zinc-900/60 p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="mb-3 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-stone-500">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Ops status
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className={`border px-2.5 py-1 text-xs font-semibold uppercase ${opsStatusClass(opsStatus.status)}`}>
+                      {opsStatus.status}
+                    </span>
+                    <span className="text-sm text-stone-500">
+                      Updated {new Date(opsStatus.generated_at).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="border border-stone-800 bg-black/35 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-600">Due</div>
+                    <div className="mt-1 text-2xl font-semibold text-blue-300">{opsStatus.webhooks.due}</div>
+                  </div>
+                  <div className="border border-stone-800 bg-black/35 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-600">Terminal</div>
+                    <div className="mt-1 text-2xl font-semibold text-red-300">
+                      {opsStatus.webhooks.failed + opsStatus.webhooks.blocked}
+                    </div>
+                  </div>
+                  <div className="border border-stone-800 bg-black/35 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-600">Review</div>
+                    <div className="mt-1 text-2xl font-semibold text-amber-300">{opsStatus.verification.flagged_pending}</div>
+                  </div>
+                  <div className="border border-stone-800 bg-black/35 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-600">Oldest</div>
+                    <div className="mt-1 text-2xl font-semibold text-stone-200">
+                      {formatAge(opsStatus.webhooks.oldest_pending_age_seconds)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {opsStatus.checks.map((check) => (
+                  <div key={check.name} className="flex items-start justify-between gap-4 border border-stone-800 bg-black/35 p-3">
+                    <div>
+                      <div className="font-mono text-[10px] uppercase tracking-wider text-stone-600">{check.name}</div>
+                      <div className="mt-1 text-sm text-stone-300">{check.detail}</div>
+                    </div>
+                    <span className={`shrink-0 border px-2 py-1 text-[10px] font-semibold uppercase ${opsStatusClass(check.status)}`}>
+                      {check.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 border border-stone-800 bg-black/35 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-stone-600">SLA alerting</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className={`border px-2 py-1 text-[10px] font-semibold uppercase ${opsStatusClass(opsStatus.status)}`}>
+                        {opsStatus.alerts.severity}
+                      </span>
+                      <span className="text-sm text-stone-400">
+                        {opsStatus.alerts.routing_configured
+                          ? `Routes: ${opsStatus.alerts.channels.join(", ")}`
+                          : "No alert route configured"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-right sm:grid-cols-4">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-600">SLO</div>
+                      <div className="mt-1 text-sm font-semibold text-stone-200">
+                        {formatPercent(opsStatus.sla.target_success_rate)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-600">Success</div>
+                      <div className="mt-1 text-sm font-semibold text-stone-200">
+                        {formatPercent(opsStatus.sla.webhook_success_rate)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-600">Burn</div>
+                      <div className="mt-1 text-sm font-semibold text-stone-200">
+                        {opsStatus.sla.error_budget_burn_percent === null
+                          ? "-"
+                          : `${opsStatus.sla.error_budget_burn_percent}%`}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-600">Window</div>
+                      <div className="mt-1 text-sm font-semibold text-stone-200">{opsStatus.sla.window_hours}h</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2 md:grid-cols-2">
+                  {opsStatus.alerts.recommended_actions.map((action) => (
+                    <div key={action} className="border border-stone-800 bg-zinc-950/60 px-3 py-2 text-xs text-stone-300">
+                      {action}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           )}
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -327,8 +498,8 @@ export default function IntegrationsPage() {
 
           <section className="grid gap-4 lg:grid-cols-3">
             <SnippetCard title="TypeScript SDK" description="Protect custom agents and backend jobs." code={SDK_SNIPPET} />
-            <SnippetCard title="LangChain" description="Wrap Aurel as an action intent guard." code={LANGCHAIN_SNIPPET} />
-            <SnippetCard title="CrewAI" description="Add Aurel before high-consequence agent tasks." code={CREWAI_SNIPPET} />
+            <SnippetCard title="LangChain" description="Wrap Aurels as an action intent guard." code={LANGCHAIN_SNIPPET} />
+            <SnippetCard title="CrewAI" description="Add Aurels before high-consequence agent tasks." code={CREWAI_SNIPPET} />
           </section>
 
           <section className="grid gap-6 lg:grid-cols-2">

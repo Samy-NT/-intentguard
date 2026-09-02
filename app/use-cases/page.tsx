@@ -4,7 +4,7 @@ import { AurelGridSection, AurelPublicHeader, AurelPublicMain } from "@/app/comp
 export const metadata: Metadata = {
   title: "Use Cases",
   description:
-    "Practical Aurel use cases for securing autonomous actions before execution: payments, approvals, procurement, data access, external tools, and operational workflows.",
+    "Practical Aurels use cases for securing autonomous actions before execution: payments, approvals, procurement, data access, external tools, and operational workflows.",
   alternates: {
     canonical: "/use-cases",
   },
@@ -51,7 +51,7 @@ const useCases = [
 
 const lanes = [
   ["Agent request", "The agent proposes an action with context, target, scope, and supporting trace."],
-  ["Intent firewall", "Aurel checks policy, behavior, semantic alignment, provenance, and risk."],
+  ["Intent firewall", "Aurels checks policy, behavior, semantic alignment, provenance, and risk."],
   ["Decision pass", "The runtime receives allow, flag, or block before the downstream tool executes."],
 ];
 
@@ -59,7 +59,7 @@ export default function UseCasesPage() {
   return (
     <AurelPublicMain>
       <AurelPublicHeader eyebrow="Use cases / autonomous actions" title="Where the gate belongs">
-        Aurel belongs before high-consequence autonomous actions. Payments are one
+        Aurels belongs before high-consequence autonomous actions. Payments are one
         important lane; the broader pattern is intent verification before an agent&apos;s
         decision passes into a real tool, system, workflow, or external service.
       </AurelPublicHeader>
@@ -90,7 +90,7 @@ export default function UseCasesPage() {
             <h2 className="aurel-title text-3xl md:text-5xl">Autonomy needs a checkpoint.</h2>
           </div>
           <p className="max-w-2xl text-lg leading-8 text-stone-400">
-            Use Aurel wherever an agent can cross from recommendation into execution.
+            Use Aurels wherever an agent can cross from recommendation into execution.
             The endpoint can protect financial actions today, and the model generalizes
             to any action where intent, policy, and auditability matter.
           </p>
@@ -126,7 +126,7 @@ export default function UseCasesPage() {
           <div className="text-lg leading-8 text-stone-400">
             The live console still uses a payment scenario because financial actions
             make intent risk easy to inspect: target, amount, provenance, policy,
-            velocity, decision, and signed audit. Aurel&apos;s product position is broader:
+            velocity, decision, and signed audit. The Aurels product position is broader:
             secure the intent before any autonomous action executes.
           </div>
         </div>

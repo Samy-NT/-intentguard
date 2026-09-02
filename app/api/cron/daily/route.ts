@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { requireCronSecret } from "@/app/api/cron/_auth";
+import { runAuditBackfillCron } from "@/app/api/cron/audit-backfill/route";
 import { runNightlyExportCron } from "@/app/api/cron/nightly-export/route";
 import { runRetentionCron } from "@/app/api/cron/retention/route";
 import { runWebhookCron } from "@/app/api/cron/webhooks/route";
@@ -12,9 +13,10 @@ export async function POST(req: NextRequest) {
   const auth = requireCronSecret(req);
   if (auth) return auth;
 
-  const [webhooks, nightlyExport, retention] = await Promise.all([
+  const [webhooks, nightlyExport, auditBackfill, retention] = await Promise.all([
     runWebhookCron(),
     runNightlyExportCron(),
+    runAuditBackfillCron(1000),
     runRetentionCron(),
   ]);
 
@@ -24,6 +26,7 @@ export async function POST(req: NextRequest) {
       success: failed.length === 0,
       webhooks: await readJson(webhooks),
       nightly_export: await readJson(nightlyExport),
+      audit_backfill: await readJson(auditBackfill),
       retention: await readJson(retention),
     },
     { status: failed[0]?.status ?? 200 }

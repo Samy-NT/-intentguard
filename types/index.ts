@@ -16,6 +16,10 @@ export interface PaymentIntent {
   merchant_id?: string;
   /** Agent's natural-language reasoning for this action — stored for auditing */
   agent_context?: string;
+  /** Declared operational mission used by semantic analysis to detect mission drift. */
+  mission_scope?: string;
+  /** Optional signed user mandate that constrains this payment intent. */
+  mandate?: import("@/lib/mandates").SignedMandate;
   /** Free-form context forwarded by the agent */
   metadata?: Record<string, unknown>;
 }

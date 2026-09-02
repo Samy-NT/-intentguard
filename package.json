@@ -22,16 +22,20 @@
     "test:crewai": "python -m unittest discover -s integrations/crewai/tests",
     "build:openclaw-plugin": "tsc -p integrations/openclaw/tsconfig.json",
     "smoke:openclaw-plugin": "node -e \"import('./integrations/openclaw/dist/index.js').then((m)=>{ if (m.default?.id !== 'aurel' || typeof m.default?.register !== 'function') process.exit(1); })\"",
-    "package:openclaw-plugin": "cd integrations/openclaw && npm pack --dry-run",
+    "package:openclaw-plugin": "node -e \"require('fs').mkdirSync('outputs',{recursive:true})\" && cd integrations/openclaw && npm pack --pack-destination ../../outputs",
     "build:hermes-plugin": "python -m compileall -q integrations/hermes",
     "package:hermes-plugin": "node -e \"require('fs').mkdirSync('outputs',{recursive:true})\" && tar -acf outputs/aurel-hermes-plugin.zip -C integrations/hermes plugin.yaml __init__.py README.md aurel_hermes/__init__.py aurel_hermes/client.py aurel_hermes/config.py aurel_hermes/plugin.py aurel_hermes/redaction.py",
     "build:crewai-integration": "python -m compileall -q integrations/crewai",
     "package:crewai-integration": "node -e \"require('fs').mkdirSync('outputs',{recursive:true})\" && tar -acf outputs/aurel-crewai-integration.zip -C integrations/crewai README.md aurel_crewai/__init__.py aurel_crewai/guard.py aurel_crewai/redaction.py",
     "package:codex-plugin": "node -e \"require('fs').mkdirSync('outputs',{recursive:true})\" && tar -acf outputs/aurel-codex-plugin.zip -C integrations/codex/aurel-codex-plugin .codex-plugin/plugin.json .mcp.json README.md scripts/aurel-protected-mcp.mjs",
     "package:agent-integrations": "node scripts/package-agent-integrations.mjs",
+    "package:download-manifest": "node scripts/generate-download-manifest.mjs",
+    "verify:download-artifacts": "node scripts/verify-download-artifacts.mjs",
+    "bootstrap:workspace": "node scripts/bootstrap-workspace.mjs",
     "dev:aurel-harness": "node integrations/dev-harness/mock-aurel-server.mjs",
     "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./benchmark/register.mjs benchmark/run.ts",
-    "benchmark:e2e:ollama": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./benchmark/register.mjs benchmark/e2e-ollama.ts"
+    "benchmark:e2e:ollama": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./benchmark/register.mjs benchmark/e2e-ollama.ts",
+    "smoke:prod-readiness": "node scripts/smoke-prod-readiness.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",

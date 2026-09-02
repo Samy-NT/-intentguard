@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiKeyHeaders, storeApiKey } from "@/app/dashboard/api-key";
+import { storeSessionAuth } from "@/app/dashboard/api-key";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,10 +18,15 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/logs", { headers: apiKeyHeaders(apiKey) });
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: apiKey }),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Invalid API key");
-      storeApiKey(apiKey);
+      if (typeof data.csrf_token !== "string") throw new Error("Login did not return a CSRF token");
+      storeSessionAuth(data.csrf_token);
       router.push("/dashboard");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Invalid API key");
@@ -36,13 +42,13 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center border border-stone-700 bg-stone-100">
-              <img src="/logo.png" alt="Aurel" className="h-7 w-7" />
+              <Image src="/logo.png" alt="Aurels" width={28} height={28} className="h-7 w-7" />
             </span>
             <h1 className="font-mono text-lg font-semibold uppercase tracking-[0.24em] text-stone-100">
-              Aurel
+              Aurels
             </h1>
           </Link>
-          <p className="text-stone-500 mt-3">Sign in with a workspace API key</p>
+          <p className="text-stone-500 mt-3">Sign in with a workspace API key. The dashboard uses a signed httpOnly session after login.</p>
         </div>
 
         {/* Form */}

@@ -73,7 +73,7 @@ Expected outcome:
 
 ## Product Gaps To Close
 
-- Add a UI action to verify a selected audit log signature.
-- Add historical backfill for unsigned logs.
-- Add mandate objects for Phase 2: signed user instruction, allowed merchant/amount/category, expiration, and verifier identity.
-- Add canned pilot templates: SaaS spend guardrail, procurement guardrail, marketplace payout guardrail, treasury guardrail.
+- Add a UI action to verify a selected audit log signature. ✅ Implemented in the dashboard.
+- Add historical backfill for unsigned logs. ✅ Implemented via `/api/cron/audit-backfill` and the daily cron.
+- Add mandate objects for Phase 2: signed user instruction, allowed merchant/amount/category, expiration, and verifier identity. Initial signed mandate API and verify enforcement are implemented.
+- Add canned pilot templates: SaaS spend guardrail, procurement guardrail, marketplace payout guardrail, treasury guardrail. ✅ Initial templates are available in Settings.

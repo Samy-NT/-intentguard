@@ -1,6 +1,6 @@
 {
   "name": "Aurel",
-  "url": "https://aurel.io/",
+  "url": "https://aurels.dev/",
   "description": "Aurel is a runtime intent firewall for autonomous actions. It secures intent before a decision passes using deterministic policy, behavior checks, and semantic analysis.",
   "category": [
     "AI agent security",
@@ -41,17 +41,17 @@
     "audit export"
   ],
   "canonical_pages": {
-    "homepage": "https://aurel.io/",
-    "ai_index": "https://aurel.io/ai-index",
-    "api_reference": "https://aurel.io/api-reference",
-    "security": "https://aurel.io/security",
-    "use_cases": "https://aurel.io/use-cases",
-    "docs": "https://aurel.io/docs",
-    "llms": "https://aurel.io/llms.txt",
-    "llms_full": "https://aurel.io/llms-full.txt",
-    "sitemap": "https://aurel.io/sitemap.xml"
+    "homepage": "https://aurels.dev/",
+    "ai_index": "https://aurels.dev/ai-index",
+    "api_reference": "https://aurels.dev/api-reference",
+    "security": "https://aurels.dev/security",
+    "use_cases": "https://aurels.dev/use-cases",
+    "docs": "https://aurels.dev/docs",
+    "llms": "https://aurels.dev/llms.txt",
+    "llms_full": "https://aurels.dev/llms-full.txt",
+    "sitemap": "https://aurels.dev/sitemap.xml"
   },
-  "contact": "contact@aurel.io",
+  "contact": "aurels.dev@gmail.com",
   "repository": "https://github.com/Samy-NT/intentguard",
   "last_updated": "2026-08-27"
 }

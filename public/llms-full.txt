@@ -42,7 +42,7 @@ Aurel returns a structured verification result with:
 ## API Example
 
 ```bash
-curl -X POST https://aurel.io/api/v1/verify \
+curl -X POST https://aurels.dev/api/v1/verify \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
@@ -72,17 +72,17 @@ Aurel is not a payment processor, wallet, bank, card network, checkout provider,
 
 ## Canonical URLs
 
-- Homepage: https://aurel.io/
-- AI Index: https://aurel.io/ai-index
-- API Reference: https://aurel.io/api-reference
-- Security: https://aurel.io/security
-- Use Cases: https://aurel.io/use-cases
-- Documentation: https://aurel.io/docs
-- Sitemap: https://aurel.io/sitemap.xml
-- Robots: https://aurel.io/robots.txt
+- Homepage: https://aurels.dev/
+- AI Index: https://aurels.dev/ai-index
+- API Reference: https://aurels.dev/api-reference
+- Security: https://aurels.dev/security
+- Use Cases: https://aurels.dev/use-cases
+- Documentation: https://aurels.dev/docs
+- Sitemap: https://aurels.dev/sitemap.xml
+- Robots: https://aurels.dev/robots.txt
 
 ## Contact
 
-Email: contact@aurel.io
+Email: aurels.dev@gmail.com
 
 Repository: https://github.com/Samy-NT/intentguard

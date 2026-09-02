@@ -17,11 +17,18 @@ export interface AuditDecisionRecord {
 }
 
 export function getAuditSigningSecret(): string {
+  const [activeSecret] = getAuditVerificationSecrets();
+  return activeSecret ?? "";
+}
+
+export function getAuditVerificationSecrets(): string[] {
   return (
-    process.env.AUDIT_SIGNING_SECRET ||
-    process.env.INTENTGUARD_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    ""
+    uniqueSecrets([
+      process.env.AUDIT_SIGNING_SECRET,
+      ...splitSecrets(process.env.AUDIT_SIGNING_PREVIOUS_SECRETS),
+      process.env.INTENTGUARD_SECRET,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    ])
   );
 }
 
@@ -45,9 +52,11 @@ export function signAuditDecision(
 export function verifyAuditDecisionSignature(
   record: AuditDecisionRecord,
   signature: string,
-  secret = getAuditSigningSecret()
+  secret?: string
 ): boolean {
-  return signAuditDecision(record, secret) === signature;
+  const normalizedSignature = signature.toLowerCase();
+  const secrets = secret ? [secret] : getAuditVerificationSecrets();
+  return secrets.some((candidate) => signAuditDecision(record, candidate) === normalizedSignature);
 }
 
 function sortForCanonicalJson(value: unknown): unknown {
@@ -64,4 +73,22 @@ function sortForCanonicalJson(value: unknown): unknown {
   }
 
   return value;
+}
+
+function splitSecrets(value: string | undefined): string[] {
+  return value?.split(",").map((secret) => secret.trim()).filter(Boolean) ?? [];
+}
+
+function uniqueSecrets(values: Array<string | undefined>): string[] {
+  const seen = new Set<string>();
+  const secrets: string[] = [];
+
+  for (const value of values) {
+    const secret = value?.trim();
+    if (!secret || seen.has(secret)) continue;
+    seen.add(secret);
+    secrets.push(secret);
+  }
+
+  return secrets;
 }
