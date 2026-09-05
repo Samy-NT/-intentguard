@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await db
     .from("verify_logs")
-    .select("intent_id, agent_id, recipient, merchant_id, amount, currency, decision, triggered_rule, risk_score, review_status, review_note, reviewed_at, audit_signature, audit_signature_version, created_at")
+    .select("intent_id, intent_payload_hash, agent_id, recipient, merchant_id, amount, currency, decision, triggered_rule, risk_score, review_status, review_note, reviewed_at, audit_signature, audit_signature_version, created_at")
     .eq("workspace_id", workspace_id)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     const headers = [
       "created_at",
       "intent_id",
+      "intent_payload_hash",
       "agent_id",
       "recipient",
       "merchant_id",

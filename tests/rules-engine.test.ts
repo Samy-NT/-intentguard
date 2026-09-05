@@ -289,4 +289,22 @@ describe("velocity evaluators", () => {
 
     expect(result?.decision).toBe("block");
   });
+
+  it("fails closed when velocity storage is unavailable and explicitly configured", async () => {
+    const rule = makeRule({
+      id: "velocity_count",
+      rule_type: "velocity_count",
+      config: { window_seconds: 3600, max_count: 5, scope: "agent" },
+    });
+    const { db } = mockVelocityDb({ count: null, error: { message: "database unavailable" } });
+    const previous = process.env.AUREL_VELOCITY_FAIL_MODE;
+    process.env.AUREL_VELOCITY_FAIL_MODE = "closed";
+    try {
+      const result = await evaluateVelocityCount(rule, { intent: makeIntent(), db });
+      expect(result).toMatchObject({ decision: "block", risk_score: 100 });
+    } finally {
+      if (previous === undefined) delete process.env.AUREL_VELOCITY_FAIL_MODE;
+      else process.env.AUREL_VELOCITY_FAIL_MODE = previous;
+    }
+  });
 });

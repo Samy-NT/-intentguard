@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiKeyHeaders, storeApiKey } from "@/app/dashboard/api-key";
 import { BookOpen, CheckCircle2, KeyRound, Lock, PlugZap, ShieldCheck } from "lucide-react";
+import { AurelAuthHeader } from "@/app/components/AurelPublicShell";
 
 const STEPS = [
   {
@@ -66,7 +67,9 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="aurel-bg flex min-h-screen items-center justify-center p-4">
+    <div className="aurel-bg min-h-screen">
+      <AurelAuthHeader />
+      <div className="flex items-center justify-center p-4 py-12">
       <div className="w-full max-w-3xl">
         <div className="mb-8">
           <div className="mb-4 flex items-center justify-between">
@@ -114,6 +117,7 @@ export default function OnboardingPage() {
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-stone-400">Workspace API key</span>
                 <input
+                  id="onboarding-api-key"
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
@@ -219,6 +223,7 @@ export default function OnboardingPage() {
         >
           Skip onboarding
         </button>
+      </div>
       </div>
     </div>
   );

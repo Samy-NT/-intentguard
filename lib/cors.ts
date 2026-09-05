@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 export const CORS_ALLOWED_METHODS = "GET,POST,PATCH,DELETE,OPTIONS";
-export const CORS_ALLOWED_HEADERS = "Content-Type, x-api-key, x-aurel-csrf, Authorization, Idempotency-Key";
+export const CORS_ALLOWED_HEADERS = "Content-Type, x-api-key, x-aurel-csrf, Authorization, Idempotency-Key, X-Request-ID";
 
 export type CorsDecision =
   | { allowed: true; origin: string | null }
@@ -16,7 +16,15 @@ export function parseAllowedOrigins(value = process.env.ALLOWED_ORIGINS): string
 
 export function evaluateCorsOrigin(origin: string | null, allowedOrigins = parseAllowedOrigins()): CorsDecision {
   if (!origin) return { allowed: true, origin: null };
-  if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return { allowed: true, origin };
+  // Browser credentials must never be exposed to an arbitrary origin in production.
+  // Server-to-server callers normally omit Origin and remain unaffected.
+  if (allowedOrigins.length === 0) {
+    if (process.env.NODE_ENV === "production") {
+      return { allowed: false, origin, reason: "ALLOWED_ORIGINS is not configured" };
+    }
+    return { allowed: true, origin };
+  }
+  if (allowedOrigins.includes(origin)) return { allowed: true, origin };
   return { allowed: false, origin, reason: "Origin is not allowed" };
 }
 
@@ -25,6 +33,7 @@ export function corsHeaders(origin: string | null): HeadersInit {
     "Access-Control-Allow-Methods": CORS_ALLOWED_METHODS,
     "Access-Control-Allow-Headers": CORS_ALLOWED_HEADERS,
     "Access-Control-Max-Age": "600",
+    "Access-Control-Expose-Headers": "X-Request-ID, X-IntentGuard-Version",
     Vary: "Origin",
   };
 

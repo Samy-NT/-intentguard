@@ -7,7 +7,8 @@ const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 interface DashboardSessionPayload {
   workspace_id: string;
-  api_key_id: string;
+  api_key_id?: string;
+  supabase_user_id?: string;
   role: ApiKeyRole;
   csrf_token: string;
   expires_at: string;
@@ -27,7 +28,10 @@ function fromBase64url(input: string): string {
 }
 
 function sessionSecret(): string | null {
-  return process.env.DASHBOARD_SESSION_SECRET || process.env.INTENTGUARD_SECRET || process.env.AUDIT_SIGNING_SECRET || null;
+  const dedicated = process.env.DASHBOARD_SESSION_SECRET?.trim();
+  // Never reuse API-key or audit signing material for dashboard cookies in production.
+  if (process.env.NODE_ENV === "production") return dedicated || null;
+  return dedicated || process.env.INTENTGUARD_SECRET || process.env.AUDIT_SIGNING_SECRET || null;
 }
 
 async function hmacSha256(secret: string, text: string): Promise<string> {
@@ -56,18 +60,23 @@ function safeEqual(a: string, b: string): boolean {
 
 export async function createDashboardSession(input: {
   workspace_id: string;
-  api_key_id: string;
+  api_key_id?: string;
+  supabase_user_id?: string;
   role: ApiKeyRole;
   now?: Date;
 }): Promise<{ token: string; expires_at: string; csrf_token: string }> {
   const secret = sessionSecret();
   if (!secret) throw new Error("DASHBOARD_SESSION_SECRET or INTENTGUARD_SECRET is required");
+  if (!input.api_key_id && !input.supabase_user_id) {
+    throw new Error("Dashboard session requires an API key or Supabase user principal");
+  }
 
   const now = input.now ?? new Date();
   const expires_at = new Date(now.getTime() + SESSION_TTL_SECONDS * 1000).toISOString();
   const payload: DashboardSessionPayload = {
     workspace_id: input.workspace_id,
-    api_key_id: input.api_key_id,
+    ...(input.api_key_id ? { api_key_id: input.api_key_id } : {}),
+    ...(input.supabase_user_id ? { supabase_user_id: input.supabase_user_id } : {}),
     role: input.role,
     csrf_token: crypto.randomUUID(),
     expires_at,
@@ -93,19 +102,22 @@ function parseToken(raw: string): DashboardSessionToken | null {
     const token = JSON.parse(fromBase64url(raw)) as Partial<DashboardSessionToken>;
     if (!token.payload || typeof token.signature !== "string") return null;
     const payload = token.payload as Partial<DashboardSessionPayload>;
+    const hasApiKeyPrincipal = typeof payload.api_key_id === "string" && payload.api_key_id.trim().length > 0;
+    const hasSupabasePrincipal = typeof payload.supabase_user_id === "string" && payload.supabase_user_id.trim().length > 0;
     if (
       typeof payload.workspace_id !== "string" ||
-      typeof payload.api_key_id !== "string" ||
       (payload.role !== "admin" && payload.role !== "operator" && payload.role !== "viewer") ||
       typeof payload.csrf_token !== "string" ||
-      typeof payload.expires_at !== "string"
+      typeof payload.expires_at !== "string" ||
+      hasApiKeyPrincipal === hasSupabasePrincipal
     ) {
       return null;
     }
     return {
       payload: {
         workspace_id: payload.workspace_id,
-        api_key_id: payload.api_key_id,
+        ...(hasApiKeyPrincipal ? { api_key_id: payload.api_key_id!.trim() } : {}),
+        ...(hasSupabasePrincipal ? { supabase_user_id: payload.supabase_user_id!.trim() } : {}),
         role: payload.role,
         csrf_token: payload.csrf_token,
         expires_at: payload.expires_at,
@@ -121,7 +133,7 @@ export async function validateDashboardSession(
   req: NextRequest,
   db: SupabaseClient,
   now = new Date()
-): Promise<{ valid: true; workspace_id: string; api_key_id: string; role: ApiKeyRole; csrf_token: string } | { valid: false; error: string }> {
+): Promise<DashboardSessionValidation> {
   const raw = req.cookies.get(DASHBOARD_SESSION_COOKIE)?.value;
   if (!raw) return { valid: false, error: "Missing dashboard session" };
 
@@ -132,7 +144,7 @@ export async function validateDashboardSessionToken(
   raw: string,
   db: SupabaseClient,
   now = new Date()
-): Promise<{ valid: true; workspace_id: string; api_key_id: string; role: ApiKeyRole; csrf_token: string } | { valid: false; error: string }> {
+): Promise<DashboardSessionValidation> {
   const secret = sessionSecret();
   if (!secret) return { valid: false, error: "Dashboard session secret is not configured" };
 
@@ -147,10 +159,14 @@ export async function validateDashboardSessionToken(
     return { valid: false, error: "Dashboard session expired" };
   }
 
+  if (token.payload.supabase_user_id) {
+    return validateSupabaseMemberSession(token.payload, db);
+  }
+
   const { data, error } = await db
     .from("api_keys")
     .select("id, workspace_id, is_active, role")
-    .eq("id", token.payload.api_key_id)
+    .eq("id", token.payload.api_key_id!)
     .eq("workspace_id", token.payload.workspace_id)
     .maybeSingle<Pick<DbApiKey, "id" | "workspace_id" | "is_active" | "role">>();
 
@@ -164,6 +180,48 @@ export async function validateDashboardSessionToken(
     api_key_id: data.id,
     role: data.role ?? token.payload.role,
     csrf_token: token.payload.csrf_token,
+  };
+}
+
+type DashboardSessionValidation =
+  | {
+      valid: true;
+      workspace_id: string;
+      role: ApiKeyRole;
+      csrf_token: string;
+      api_key_id?: string;
+      supabase_user_id?: string;
+    }
+  | { valid: false; error: string };
+
+interface DbWorkspaceMember {
+  user_id: string;
+  workspace_id: string;
+  role: ApiKeyRole;
+  is_active: boolean;
+}
+
+async function validateSupabaseMemberSession(
+  payload: DashboardSessionPayload,
+  db: SupabaseClient
+): Promise<DashboardSessionValidation> {
+  const { data, error } = await db
+    .from("workspace_members")
+    .select("user_id, workspace_id, is_active, role")
+    .eq("user_id", payload.supabase_user_id!)
+    .eq("workspace_id", payload.workspace_id)
+    .maybeSingle<DbWorkspaceMember>();
+
+  if (error || !data || !data.is_active) {
+    return { valid: false, error: "Dashboard session workspace membership is no longer active" };
+  }
+
+  return {
+    valid: true,
+    workspace_id: data.workspace_id,
+    supabase_user_id: data.user_id,
+    role: data.role,
+    csrf_token: payload.csrf_token,
   };
 }
 

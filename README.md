@@ -56,8 +56,13 @@ npm run bootstrap:workspace -- --workspace-name "Acme Pilot"
 ```
 
 The script prints the raw admin key once. Store it in a secret manager, then create narrower operator/viewer keys from `/dashboard/api-keys`.
-Manual beta plan limits are configured in `/dashboard/settings`: set `workspace_status`, `billing_plan`,
-and `monthly_verification_limit` to suspend workspaces or cap new verification requests before a billing provider is connected.
+Human dashboard users can sign in through Supabase Auth magic links after an active `workspace_members` row links their
+Supabase user id to a workspace and role. Admins can provision those rows from `/dashboard/members` or through `POST /api/v1/workspace/members`,
+which sends a Supabase invite when an email is supplied. API keys remain the integration credential for agents and bootstrap access.
+Manual beta entitlements are provisioned through the controlled bootstrap/service-role workflow; `/dashboard/settings` shows
+provider-owned `workspace_status`, `billing_plan`, and `monthly_verification_limit` as read-only. Optional Stripe self-serve checkout
+is enabled only with `BILLING_PROVIDER=stripe`; signed webhooks and reconciliation own entitlement state. Linked customers can manage
+payment methods and subscriptions through the Stripe-hosted portal from `/billing`.
 
 ---
 
@@ -67,6 +72,8 @@ and `monthly_verification_limit` to suspend workspaces or cap new verification r
 
 Authenticates via `x-api-key` header. Returns a decision with risk score, triggered layer, and full audit entry.
 Production verification requests are rate-limited per workspace.
+The `intent_id` is an idempotency key bound to the full request payload; retries replay the signed verdict,
+while a changed payload returns `409 Conflict`.
 
 ```bash
 curl -X POST https://your-deployment.vercel.app/api/v1/verify \
@@ -112,12 +119,21 @@ All workspace endpoints require `x-api-key` and are scoped to the key's workspac
 - `GET /api/workspace/api-keys`
 - `POST /api/workspace/api-keys` — returns the raw key once
 - `DELETE /api/workspace/api-keys` — revokes a key by id
+- `GET /api/v1/workspace/members` — list Supabase Auth dashboard members
+- `POST /api/v1/workspace/members` — invite/link a dashboard member by email or `user_id`
+- `DELETE /api/v1/workspace/members` — deactivate dashboard access by `user_id`
 - `PATCH /api/logs/review` — approve or reject flagged verifications
 - `GET /api/workspace/webhook-deliveries` — inspect webhook delivery history
 - `GET /api/workspace/webhook-jobs` — inspect pending/retried webhook jobs
 - `PATCH /api/workspace/webhook-jobs` — retry a failed webhook job
 - `GET /api/workspace/audit-export?format=json|csv` — export audit logs
 - `GET /api/workspace/audit-verify?intent_id=...` — verify a stored audit log signature
+- `GET /api/workspace/action-audit?action_id=...` — inspect signed generic agent/tool action decisions
+- `GET /api/workspace/action-telemetry?action_id=...` — inspect bounded, redacted post-execution events
+- `GET /api/workspace/action-telemetry-export?format=json|csv` — export post-execution telemetry
+- `GET /api/openapi` — machine-readable OpenAPI 3.1 contract for the core API
+- `GET /api/workspace/action-audit-export?format=json|csv` — export signed generic action audit records
+- `POST /api/v1/audit/action-verify` — verify a generic action audit signature offline
 
 ### Audit verification
 
@@ -186,6 +202,9 @@ API keys have roles:
 - `operator` — review flagged logs and retry webhook jobs
 - `viewer` — read-only dashboard/API access
 
+API responses include an `X-Request-ID` header for support and incident correlation. Clients may supply a
+safe request id to preserve correlation across their own systems.
+
 ### SDK
 
 ```ts
@@ -208,6 +227,10 @@ const decision = await ig.verify({
 ```
 
 Adapters are available from `intentguard/sdk/adapters` for LangChain-style and CrewAI-style tool wrappers.
+Generic action preflight decisions are idempotent per `(workspace, action_id)`, reject payload reuse with a
+`409`, and return an `auditSignature` that can be verified from the action-audit endpoint. Only a SHA-256
+payload hash is stored; raw tool arguments are never persisted in the audit table.
+Action preflight and telemetry calls share the workspace rate limit (600 requests/minute by default).
 
 ---
 
@@ -249,17 +272,17 @@ npm run build
 npm run smoke:prod-readiness
 ```
 
-Expected output:
+Expected output (current suite):
 
 ```
-Test Files  39 passed (39)
-     Tests  325 passed (325)
+Test Files  51 passed (51)
+     Tests  380 passed (380)
 ```
 
 Tests cover: deterministic rule evaluation, velocity detection, semantic pattern pre-screening (social engineering, mission drift, suspicious provenance), and API auth. No external API calls are made during the test suite.
 
-`npm run smoke:prod-readiness` checks `/api/health`, `/api/v1/readiness`, `/dashboard/mandates`,
-and the expected unauthenticated `401` on `/api/v1/mandates`. Use
+`npm run smoke:prod-readiness` checks `/api/health`, `/api/v1/readiness`, `/auth/login`,
+the expected dashboard redirect without a session, and the expected unauthenticated `401` on `/api/v1/mandates`. Use
 `AUREL_SMOKE_BASE_URL=https://your-deployment.vercel.app AUREL_SMOKE_BEARER=$CRON_SECRET npm run smoke:prod-readiness -- --strict`
 after configuring production env and applying migrations.
 Strict readiness rejects `.env.example` placeholders, malformed URLs, and configured secrets shorter than 32 characters.
@@ -267,11 +290,17 @@ GitHub Actions also runs this smoke after `npm run build` by starting the produc
 Plugin downloads are served through an allowlisted `/api/downloads/[file]` route that resolves artifacts under `outputs`, requires a regular file, and sets `X-Content-Type-Options: nosniff`.
 The packaging pipeline can publish `/api/downloads/manifest`, a JSON SHA-256 manifest generated with `npm run package:download-manifest` so operators can verify downloaded plugin artifacts. CI also runs `npm run verify:download-artifacts` to confirm the manifest hashes and reject archives containing blocked paths such as `.env`, `.git`, `node_modules`, caches, or build metadata.
 
+Database delivery is guarded by `npm run verify:supabase-migrations`, which validates migration naming, ordering, non-empty SQL, and required signed-mandates history before CI or deployment proceeds. Migration `011` adds an atomic workspace entitlement reservation RPC so concurrent verification requests cannot oversubscribe a monthly limit. Migration `012` adds idempotent, hash-checked provider billing events and an entitlement application RPC. Migration `013` adds durable, redacted, idempotent action telemetry. The command validates the repository history; the target hosted project still needs an explicit migration apply and verification.
+
 Operational launch and incident steps live in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 Security headers are centralized in `lib/security-headers.ts` and applied to every route by `next.config.ts`.
+Vercel API functions are configured for a 60-second ceiling so the bounded Claude semantic timeout can complete; use a plan that supports that duration.
 Dashboard browser sessions use an httpOnly cookie plus `x-aurel-csrf` on mutating requests; SDKs and agent integrations continue to authenticate with `x-api-key`.
 Dashboard login attempts are rate-limited before API-key validation.
-API CORS is enforced by `proxy.ts`; set `ALLOWED_ORIGINS` to a comma-separated origin allowlist for browser-based agent clients.
+API CORS is enforced by `proxy.ts`; set `ALLOWED_ORIGINS` to a comma-separated origin allowlist for browser-based agent clients. In production, an empty allowlist denies credentialed browser origins by default; server-to-server integrations can omit `Origin`.
+Support requests submit to `/api/support` and are delivered to `SUPPORT_WEBHOOK_URL` when configured; email and GitHub issue links remain as pilot fallbacks.
+Billing stays manual unless `BILLING_PROVIDER=stripe` is set. When Stripe is enabled, admins can start checkout, open the customer portal, and reconcile the linked subscription against local entitlements from `/billing` or `POST /api/v1/billing/reconcile`.
+Dashboard member provisioning is available from `/dashboard/members` and through `GET` / `POST` / `DELETE /api/v1/workspace/members`; Supabase Auth membership, not `user_metadata`, is the authorization source for human dashboard sessions.
 
 ---
 
@@ -280,18 +309,26 @@ API CORS is enforced by `proxy.ts`; set `ALLOWED_ORIGINS` to a comma-separated o
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL (`https://*.supabase.co`) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anonymous key — safe to expose client-side |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase browser key for first-party dashboard auth; publishable key preferred, legacy anon key supported |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key — server-side only, never expose |
 | `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude semantic analysis (Layer 3) |
 | `INTENTGUARD_SECRET` | Recommended | Optional pepper for new API key hashes; legacy SHA-256 hashes still validate |
-| `DASHBOARD_SESSION_SECRET` | Recommended | HMAC key used for signed httpOnly dashboard sessions. Falls back to `INTENTGUARD_SECRET`, then audit signing configuration. |
-| `UPSTASH_REDIS_REST_URL` | No | Upstash Redis REST URL for demo rate limiting |
-| `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis REST token |
-| `CRON_SECRET` | Recommended | Bearer token for manual cron invocations |
-| `AUDIT_SIGNING_SECRET` | Recommended | HMAC key used to sign persisted audit decisions. Falls back to `INTENTGUARD_SECRET`, then service-role key. |
+| `DASHBOARD_SESSION_SECRET` | Required in production | HMAC key used for signed httpOnly dashboard sessions. Local/dev fallback is retained for tests only. |
+| `UPSTASH_REDIS_REST_URL` | Required in production | Upstash Redis REST URL for distributed rate limiting |
+| `UPSTASH_REDIS_REST_TOKEN` | Required in production | Upstash Redis REST token |
+| `CRON_SECRET` | Required in production | Bearer token for manual cron invocations |
+| `AUDIT_SIGNING_SECRET` | Required in production | HMAC key used to sign persisted audit decisions. |
 | `AUDIT_SIGNING_PREVIOUS_SECRETS` | Optional | Comma-separated old audit signing secrets accepted for historical verification after rotation |
-| `MANDATE_SIGNING_SECRET` | Recommended | HMAC key used to sign mandate payloads. Falls back to audit signing configuration. |
+| `MANDATE_SIGNING_SECRET` | Required in production | HMAC key used to sign mandate payloads. |
 | `MANDATE_SIGNING_PREVIOUS_SECRETS` | Optional | Comma-separated old mandate signing secrets accepted for historical verification after rotation |
+| `SUPPORT_WEBHOOK_URL` | Recommended | HTTPS endpoint for hosted support/ticket ingestion from `/api/support` |
+| `SUPPORT_WEBHOOK_SECRET` | Recommended | HMAC secret used to sign support ticket deliveries |
+| `ALLOWED_ORIGINS` | Required in production | Comma-separated browser origin allowlist for credentialed API calls |
+| `BILLING_PROVIDER` | Optional | Set to `stripe` to enable self-serve checkout; empty keeps manual pilot billing |
+| `BILLING_APP_URL` / `NEXT_PUBLIC_APP_URL` | Required for Stripe | Absolute return URL (HTTPS in production) |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Required for Stripe | Server-only Stripe API and webhook signing secrets |
+| `STRIPE_PRICE_STARTER` / `STRIPE_PRICE_PILOT` / `STRIPE_PRICE_ENTERPRISE` | Required for Stripe | Stripe Price IDs for each plan |
+| `STRIPE_PLAN_LIMITS` | Required for Stripe | JSON map of plan to positive integer limit or `null` for unlimited |
 
 Generate production secrets independently with `openssl rand -base64 32` or an equivalent secret manager generator.
 

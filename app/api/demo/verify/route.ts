@@ -4,6 +4,7 @@ import { analyzeIntent } from "@/lib/claude/analyze";
 import { assertEnv } from "@/lib/env";
 import { API_VERSION } from "@/lib/respond";
 import { checkDemoRateLimit } from "@/lib/ratelimit";
+import { trustedClientIdentity } from "@/lib/request-identity";
 
 function demoJson(data: unknown, status = 200) {
   return Response.json(data, {
@@ -344,10 +345,7 @@ function evaluateVelocity(context: string, agentId: string, amount: number): Vel
 export async function POST(req: NextRequest) {
   assertEnv();
 
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "demo";
+  const ip = trustedClientIdentity(req);
 
   const rl = await checkDemoRateLimit(ip);
   if (!rl.allowed) {

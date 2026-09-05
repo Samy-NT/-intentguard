@@ -6,6 +6,11 @@ export default defineConfig({
     environment: "node",
     globals: true,
     include: ["tests/**/*.test.ts"],
+    // Keep a single fork on Windows/OneDrive to avoid intermittent worker
+    // spawn failures while preserving the process isolation required by
+    // tests that temporarily change cwd.
+    pool: "forks",
+    maxWorkers: 1,
   },
   resolve: {
     alias: {

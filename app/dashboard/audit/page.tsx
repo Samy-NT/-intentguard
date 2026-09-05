@@ -21,6 +21,28 @@ interface AuditLog {
   created_at: string;
 }
 
+interface ActionAuditLog {
+  id: string;
+  action_id: string;
+  integration: string;
+  agent_id: string | null;
+  decision: "allow" | "block" | "require_approval" | "rewrite" | "quarantine";
+  reason: string | null;
+  risk_score: number;
+  audit_signature: string;
+  audit_signature_version: string;
+  created_at: string;
+}
+
+interface ActionTelemetryEvent {
+  id: string;
+  action_id: string;
+  integration: string;
+  outcome_status: string;
+  duration_ms: number | null;
+  created_at: string;
+}
+
 function decisionClass(decision: AuditLog["decision"]) {
   if (decision === "allow") return "text-emerald-400 bg-emerald-500/10 border-emerald-500/25";
   if (decision === "flag") return "text-amber-400 bg-amber-500/10 border-amber-500/25";
@@ -30,6 +52,8 @@ function decisionClass(decision: AuditLog["decision"]) {
 export default function AuditTrailPage() {
   const [apiKey, setApiKey] = useState("");
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [actionLogs, setActionLogs] = useState<ActionAuditLog[]>([]);
+  const [telemetryEvents, setTelemetryEvents] = useState<ActionTelemetryEvent[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,8 +71,14 @@ export default function AuditTrailPage() {
         return;
       }
       setLoading(true);
-      const res = await fetch("/api/logs", { headers: apiKeyHeaders(apiKey) });
+      const [res, actionRes] = await Promise.all([
+        fetch("/api/logs", { headers: apiKeyHeaders(apiKey) }),
+        fetch("/api/workspace/action-audit", { headers: apiKeyHeaders(apiKey) }),
+      ]);
+      const telemetryRes = await fetch("/api/workspace/action-telemetry", { headers: apiKeyHeaders(apiKey) });
       const data = await res.json().catch(() => ({}));
+      const actionData = await actionRes.json().catch(() => ({}));
+      const telemetryData = await telemetryRes.json().catch(() => ({}));
       setLoading(false);
       if (!res.ok) {
         setError(data.error ?? `HTTP ${res.status}`);
@@ -56,6 +86,8 @@ export default function AuditTrailPage() {
       }
       setError(null);
       setLogs(data.logs ?? []);
+      setActionLogs(actionRes.ok ? actionData.logs ?? [] : []);
+      setTelemetryEvents(telemetryRes.ok ? telemetryData.events ?? [] : []);
     }
     load();
   }, [apiKey]);
@@ -68,9 +100,9 @@ export default function AuditTrailPage() {
   const signed = logs.filter((log) => log.audit_signature).length;
 
   return (
-    <div className="flex min-h-screen aurel-bg text-white">
+    <div className="flex min-h-screen flex-col aurel-bg text-white lg:flex-row">
       <Sidebar />
-      <main className="ml-64 flex-1 p-8">
+      <main className="flex-1 p-4 sm:p-8 lg:ml-64">
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -179,6 +211,59 @@ export default function AuditTrailPage() {
               </table>
             )}
           </div>
+
+          <div className="border border-stone-800 bg-zinc-900/60 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold">Post-execution telemetry</h2>
+                <p className="mt-1 text-xs text-zinc-500">Redacted outcomes reported by protected integrations.</p>
+              </div>
+              <span className="font-mono text-xs text-emerald-400">{telemetryEvents.length} events</span>
+            </div>
+            {telemetryEvents.length > 0 && (
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                {(["success", "failure", "blocked"] as const).map((status) => (
+                  <div key={status} className="border border-stone-800 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-600">{status}</div>
+                    <div className="mt-1 font-mono text-lg text-zinc-200">{telemetryEvents.filter((event) => event.outcome_status === status).length}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <section className="overflow-hidden border border-stone-800 bg-zinc-900/60">
+            <div className="flex items-center justify-between border-b border-stone-800 px-4 py-3">
+              <div>
+                <h2 className="text-sm font-semibold">Generic action decisions</h2>
+                <p className="mt-1 text-xs text-zinc-500">Signed preflight records for tool calls and agent actions.</p>
+              </div>
+              <span className="font-mono text-xs text-emerald-400">{actionLogs.length} signed</span>
+            </div>
+            {actionLogs.length === 0 ? (
+              <div className="p-8 text-center text-sm text-zinc-500">No generic action audits yet.</div>
+            ) : (
+              <div className="divide-y divide-zinc-800/70">
+                {actionLogs.map((log) => (
+                  <div key={log.id} className="flex flex-col gap-2 px-4 py-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="font-mono text-xs text-zinc-200">{log.action_id}</div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        {log.integration} · {log.agent_id ?? "unknown agent"} · {new Date(log.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-xs text-zinc-400">risk {log.risk_score}</span>
+                      <span className={`border px-2 py-1 text-xs ${log.decision === "allow" ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400" : log.decision === "block" ? "border-red-500/25 bg-red-500/10 text-red-400" : "border-amber-500/25 bg-amber-500/10 text-amber-400"}`}>
+                        {log.decision}
+                      </span>
+                      <span className="text-xs text-emerald-400">signed</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </main>
     </div>

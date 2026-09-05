@@ -14,8 +14,8 @@ import { recordLayerMetric, captureError } from "@/lib/monitoring";
 import { checkWorkspaceRateLimit } from "@/lib/ratelimit";
 import { AUDIT_SIGNATURE_VERSION, signAuditDecision } from "@/lib/audit";
 import { evaluateMandate, SignedMandateSchema } from "@/lib/mandates";
-import { getMissionScope } from "@/lib/payment-intent";
-import { evaluateWorkspaceEntitlements, normalizeWorkspaceStatus } from "@/lib/entitlements";
+import { getMissionScope, hashPaymentIntent } from "@/lib/payment-intent";
+import { normalizeWorkspaceStatus, reserveWorkspaceVerification } from "@/lib/entitlements";
 import type { RuleDecision, VerifyResponse } from "@/types";
 
 const MAX_VERIFY_BODY_BYTES = 32_000;
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
   }
 
   const intent = { ...parsed.data, workspace_id };
+  const intentPayloadHash = hashPaymentIntent(parsed.data);
 
   // 3. Workspace config and beta/billing entitlements
   const wsConfig = await getWorkspaceConfig(intent.workspace_id, db);
@@ -78,12 +79,15 @@ export async function POST(req: NextRequest) {
   // 4. Idempotency — return cached decision for known intent_id
   const { data: existing } = await db
     .from("verify_logs")
-    .select("decision, risk_score, triggered_rule, audit_signature, audit_signature_version, created_at")
+    .select("decision, risk_score, triggered_rule, audit_signature, audit_signature_version, intent_payload_hash, created_at")
     .eq("workspace_id", intent.workspace_id)
     .eq("intent_id", intent.intent_id)
     .maybeSingle();
 
   if (existing) {
+    if (!existing.intent_payload_hash || existing.intent_payload_hash !== intentPayloadHash) {
+      return err("intent_id was already used with a different payload", 409);
+    }
     const response: VerifyResponse = {
       decision: existing.decision,
       reason: "Returned from cache (idempotent)",
@@ -97,7 +101,7 @@ export async function POST(req: NextRequest) {
     return json(response);
   }
 
-  const entitlement = await evaluateWorkspaceEntitlements(db, intent.workspace_id, wsConfig.policy);
+  const entitlement = await reserveWorkspaceVerification(db, intent.workspace_id, intent.intent_id, wsConfig.policy);
   if (!entitlement.allowed) {
     return err(entitlement.reason, entitlement.status);
   }
@@ -254,6 +258,7 @@ export async function POST(req: NextRequest) {
           recipient: auditRecord.recipient,
           merchant_id: auditRecord.merchant_id,
           mandate_id: intent.mandate?.payload.mandate_id ?? null,
+          intent_payload_hash: intentPayloadHash,
           amount: intent.amount,
           currency: auditRecord.currency,
           agent_context: intent.agent_context ?? null,
@@ -270,6 +275,31 @@ export async function POST(req: NextRequest) {
       "audit-log-insert"
     );
     if (error) {
+      // Two callers can evaluate the same intent concurrently. If the unique
+      // workspace/intent index rejected this insert, replay the winner's
+      // signed decision instead of surfacing a spurious 500.
+      const raced = await db
+        .from("verify_logs")
+        .select("decision, risk_score, triggered_rule, audit_signature, audit_signature_version, intent_payload_hash, created_at")
+        .eq("workspace_id", intent.workspace_id)
+        .eq("intent_id", intent.intent_id)
+        .maybeSingle();
+      if (raced.data) {
+        if (raced.data.intent_payload_hash !== intentPayloadHash) {
+          return err("intent_id was already used with a different payload", 409);
+        }
+        const response: VerifyResponse = {
+          decision: raced.data.decision,
+          reason: "Returned from cache (idempotent)",
+          triggered_rule: raced.data.triggered_rule ?? undefined,
+          risk_score: raced.data.risk_score,
+          evaluated_at: raced.data.created_at ?? new Date().toISOString(),
+          intent_id: intent.intent_id,
+          audit_signature: raced.data.audit_signature ?? undefined,
+          audit_signature_version: raced.data.audit_signature_version ?? undefined,
+        };
+        return json(response);
+      }
       captureError(error, { layer: "audit-log", workspace_id: intent.workspace_id });
       console.error("[verify] Failed to write audit log:", error.message);
       return err("Failed to persist audit log", 500);

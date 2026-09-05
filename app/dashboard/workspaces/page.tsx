@@ -46,10 +46,10 @@ export default function WorkspacesPage() {
   }, [loadWorkspace]);
 
   return (
-    <div className="flex min-h-screen aurel-bg">
+    <div className="flex min-h-screen flex-col aurel-bg lg:flex-row">
       <Sidebar />
 
-      <main className="ml-64 flex-1 p-8">
+      <main className="flex-1 p-4 sm:p-8 lg:ml-64">
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>

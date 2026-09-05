@@ -1,6 +1,7 @@
 .env
 .env.local
 .env.*.local
+supabase/.temp/
 .next/
 node_modules/
 out/

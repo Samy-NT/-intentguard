@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { authenticateRequest, hashApiKey, requireRole } from "@/lib/auth";
+import { readBoundedJsonBody } from "@/lib/http/body";
 
 const CreateApiKeySchema = z.object({
   name: z.string().min(1).max(80),
@@ -23,6 +24,8 @@ function generateApiKey(): string {
 export async function GET(req: NextRequest) {
   const auth = await authenticateRequest(req);
   if (auth instanceof Response) return auth;
+  const forbidden = requireRole(auth, "admin");
+  if (forbidden) return forbidden;
   const { db, workspace_id } = auth;
 
   const { data, error } = await db
@@ -42,12 +45,9 @@ export async function POST(req: NextRequest) {
   const forbidden = requireRole(auth, "admin");
   if (forbidden) return forbidden;
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const parsedBody = await readBoundedJsonBody(req, 8_000);
+  if (parsedBody instanceof Response) return parsedBody;
+  const body = parsedBody.body;
 
   const parsed = CreateApiKeySchema.safeParse(body);
   if (!parsed.success) {
@@ -87,12 +87,9 @@ export async function DELETE(req: NextRequest) {
   const forbidden = requireRole(auth, "admin");
   if (forbidden) return forbidden;
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const parsedBody = await readBoundedJsonBody(req, 8_000);
+  if (parsedBody instanceof Response) return parsedBody;
+  const body = parsedBody.body;
 
   const parsed = RevokeApiKeySchema.safeParse(body);
   if (!parsed.success) {

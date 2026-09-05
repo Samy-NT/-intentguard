@@ -152,10 +152,10 @@ export default function MandatesPage() {
   }
 
   return (
-    <div className="flex min-h-screen aurel-bg">
+    <div className="flex min-h-screen flex-col aurel-bg lg:flex-row">
       <Sidebar />
 
-      <main className="ml-64 flex-1 p-8">
+      <main className="flex-1 p-4 sm:p-8 lg:ml-64">
         <div className="mx-auto max-w-7xl space-y-6">
           <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>

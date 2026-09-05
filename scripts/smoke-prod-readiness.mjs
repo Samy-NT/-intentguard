@@ -3,17 +3,21 @@
 const baseUrl = (process.env.AUREL_SMOKE_BASE_URL || process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
 const strict = process.argv.includes("--strict") || process.env.AUREL_SMOKE_STRICT === "true";
 const bearer = process.env.AUREL_SMOKE_BEARER || process.env.CRON_SECRET;
+const configuredOrigin = process.env.AUREL_SMOKE_ORIGIN || process.env.ALLOWED_ORIGINS?.split(",").map((origin) => origin.trim()).find(Boolean);
 const smokeOrigin =
-  process.env.AUREL_SMOKE_ORIGIN ||
-  process.env.ALLOWED_ORIGINS?.split(",").map((origin) => origin.trim()).find(Boolean) ||
-  "https://agent.example.com";
+  configuredOrigin || null;
 
 const checks = [
   { name: "health", path: "/api/health", expect: [200] },
-  { name: "readiness", path: "/api/v1/readiness", expect: strict ? [200] : [200, 503] },
-  { name: "mandates_page", path: "/dashboard/mandates", expect: [200] },
+  { name: "readiness", path: "/api/v1/readiness", expect: strict ? [200] : [200, 401, 503] },
+  { name: "login_page", path: "/auth/login", expect: [200] },
+  { name: "openapi_contract", path: "/api/openapi", expect: [200] },
+  { name: "dashboard_auth_redirect", path: "/dashboard/mandates", expect: [307, 308] },
   { name: "mandates_auth", path: "/api/v1/mandates", expect: [401] },
+  { name: "members_auth", path: "/api/v1/workspace/members", expect: [401] },
   { name: "ops_status_auth", path: "/api/v1/workspace/ops-status", expect: [401] },
+  { name: "action_telemetry_auth", path: "/api/v1/workspace/action-telemetry", expect: [401] },
+  { name: "action_telemetry_export_auth", path: "/api/v1/workspace/action-telemetry-export", expect: [401] },
   { name: "cors_preflight", path: "/api/v1/verify", method: "OPTIONS", origin: smokeOrigin, expect: [204] },
 ];
 

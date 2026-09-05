@@ -35,10 +35,15 @@ const OPTIONAL_SECRET_LIST_ENV = [
   ["MANDATE_SIGNING_PREVIOUS_SECRETS", "Previous mandate signing secrets are configured for historical verification"],
 ] as const;
 
-const REQUIRED_ENV_NAMES = new Set<string>(REQUIRED_ENV.map(([key]) => key));
+const REQUIRED_ENV_NAMES = new Set<string>([
+  ...REQUIRED_ENV.map(([key]) => key),
+  "NEXT_PUBLIC_SUPABASE_BROWSER_KEY",
+]);
 const SECRET_ENV_NAMES = new Set<string>([
   "SUPABASE_SERVICE_ROLE_KEY",
   "ANTHROPIC_API_KEY",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
   ...RECOMMENDED_ENV.map(([key]) => key),
 ]);
 
@@ -64,30 +69,51 @@ const EXPECTED_TABLES = [
   "webhook_jobs",
   "webhook_deliveries",
   "mandates",
+  "action_audit_logs",
+  "action_telemetry_events",
+  "verification_usage_reservations",
+  "verification_usage_counters",
+  "billing_events",
+  "workspace_members",
 ] as const;
 
 const DB_CHECK_TIMEOUT_MS = 1500;
 
 export function buildEnvReadiness(env: EnvLike = process.env): ReadinessCheck[] {
   const checks: ReadinessCheck[] = [];
+  const production = env.NODE_ENV === "production";
 
   for (const [key, detail] of REQUIRED_ENV) {
     checks.push(validateEnvValue(key, env[key], detail, true));
   }
+  checks.push(validateSupabaseBrowserKey(env));
 
   for (const [key, detail] of RECOMMENDED_ENV) {
-    checks.push(validateEnvValue(key, env[key], detail, false));
+    checks.push(validateEnvValue(key, env[key], detail, production));
   }
 
   for (const [key, detail] of OPTIONAL_SECRET_LIST_ENV) {
     if (env[key]) checks.push(validateSecretListEnv(key, env[key], detail));
   }
 
+  checks.push(validateSupportEnv(env));
+  checks.push(...validateBillingEnv(env));
+
+  if (env.NODE_ENV === "production" && parseAllowedOrigins(env.ALLOWED_ORIGINS).length === 0) {
+    checks.push({
+      name: "env.ALLOWED_ORIGINS",
+      status: "fail",
+      detail: "ALLOWED_ORIGINS must contain an explicit browser origin allowlist in production",
+    });
+  }
+
   if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
     checks.push({
       name: "env.UPSTASH_REDIS",
-      status: "warn",
-      detail: "Upstash Redis is recommended for distributed production rate limiting",
+      status: production ? "fail" : "warn",
+      detail: production
+        ? "Upstash Redis is required for distributed production rate limiting"
+        : "Upstash Redis is recommended for distributed production rate limiting",
     });
   } else if (!isValidHttpUrl(env.UPSTASH_REDIS_REST_URL)) {
     checks.push({
@@ -116,6 +142,44 @@ export function buildEnvReadiness(env: EnvLike = process.env): ReadinessCheck[] 
   }
 
   return checks;
+}
+
+function parseAllowedOrigins(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function validateSupabaseBrowserKey(env: EnvLike): ReadinessCheck {
+  const publishable = env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const anon = env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const value = publishable || anon;
+  const source = publishable ? "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" : "NEXT_PUBLIC_SUPABASE_ANON_KEY";
+
+  if (!value) {
+    return {
+      name: "env.NEXT_PUBLIC_SUPABASE_BROWSER_KEY",
+      status: "fail",
+      detail: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing",
+    };
+  }
+
+  if (isPlaceholderValue(value)) {
+    return {
+      name: "env.NEXT_PUBLIC_SUPABASE_BROWSER_KEY",
+      status: "fail",
+      detail: `${source} still contains a placeholder value`,
+    };
+  }
+
+  return {
+    name: "env.NEXT_PUBLIC_SUPABASE_BROWSER_KEY",
+    status: "pass",
+    detail: publishable
+      ? "Supabase publishable browser key is configured"
+      : "Supabase legacy anonymous browser key is configured",
+  };
 }
 
 export async function buildDatabaseReadiness(db: SupabaseClient): Promise<ReadinessCheck[]> {
@@ -269,6 +333,122 @@ function validateSecretListEnv(key: string, rawValue: string | undefined, readyD
   };
 }
 
+function validateSupportEnv(env: EnvLike): ReadinessCheck {
+  const url = env.SUPPORT_WEBHOOK_URL?.trim();
+  const secret = env.SUPPORT_WEBHOOK_SECRET?.trim();
+
+  if (!url) {
+    return {
+      name: "env.SUPPORT_WEBHOOK",
+      status: "warn",
+      detail: "SUPPORT_WEBHOOK_URL is recommended for production ticket ingestion",
+    };
+  }
+
+  if (!isValidHttpUrl(url)) {
+    return {
+      name: "env.SUPPORT_WEBHOOK",
+      status: "fail",
+      detail: "SUPPORT_WEBHOOK_URL must be a valid HTTP(S) URL",
+    };
+  }
+
+  if (!isHttpsUrl(url)) {
+    return {
+      name: "env.SUPPORT_WEBHOOK",
+      status: "fail",
+      detail: "SUPPORT_WEBHOOK_URL must use HTTPS",
+    };
+  }
+
+  if (isPlaceholderValue(url) || (secret && isPlaceholderValue(secret))) {
+    return {
+      name: "env.SUPPORT_WEBHOOK",
+      status: "fail",
+      detail: "Support webhook configuration still contains a placeholder value",
+    };
+  }
+
+  if (secret && secret.length < MIN_SECRET_LENGTH) {
+    return {
+      name: "env.SUPPORT_WEBHOOK",
+      status: "fail",
+      detail: `SUPPORT_WEBHOOK_SECRET must be at least ${MIN_SECRET_LENGTH} characters when configured`,
+    };
+  }
+
+  return {
+    name: "env.SUPPORT_WEBHOOK",
+    status: secret ? "pass" : "warn",
+    detail: secret
+      ? "Support ticket ingestion webhook is configured"
+      : "SUPPORT_WEBHOOK_SECRET is recommended for signed support ticket delivery",
+  };
+}
+
+function validateBillingEnv(env: EnvLike): ReadinessCheck[] {
+  const provider = env.BILLING_PROVIDER?.trim().toLowerCase();
+  const hasStripeValues = Boolean(
+    env.STRIPE_SECRET_KEY?.trim() || env.STRIPE_WEBHOOK_SECRET?.trim() ||
+      env.STRIPE_PRICE_STARTER?.trim() || env.STRIPE_PRICE_PILOT?.trim() || env.STRIPE_PRICE_ENTERPRISE?.trim()
+  );
+
+  if (!provider && !hasStripeValues) {
+    return [{ name: "env.BILLING", status: "pass", detail: "Manual billing mode is active; provider-owned entitlements are disabled" }];
+  }
+  if (provider !== "stripe") {
+    return [{ name: "env.BILLING", status: "fail", detail: "BILLING_PROVIDER must be 'stripe' when billing provider settings are present" }];
+  }
+
+  const checks: ReadinessCheck[] = [
+    validateEnvValue("STRIPE_SECRET_KEY", env.STRIPE_SECRET_KEY, "Stripe API secret is configured", true),
+    validateEnvValue("STRIPE_WEBHOOK_SECRET", env.STRIPE_WEBHOOK_SECRET, "Stripe webhook signing secret is configured", true),
+  ];
+  for (const plan of ["STARTER", "PILOT", "ENTERPRISE"]) {
+    const key = `STRIPE_PRICE_${plan}`;
+    const value = env[key]?.trim();
+    checks.push({
+      name: `env.${key}`,
+      status: value && !isPlaceholderValue(value) ? "pass" : "fail",
+      detail: value && !isPlaceholderValue(value) ? `${key} is configured` : `${key} is missing or contains a placeholder value`,
+    });
+  }
+
+  const limitsRaw = env.STRIPE_PLAN_LIMITS?.trim();
+  let limitsValid = false;
+  if (limitsRaw) {
+    try {
+      const limits = JSON.parse(limitsRaw) as Record<string, unknown>;
+      limitsValid = ["starter", "pilot", "enterprise"].every((plan) => {
+        const value = limits[plan];
+        return value === null || (typeof value === "number" && Number.isInteger(value) && value > 0);
+      });
+    } catch {
+      limitsValid = false;
+    }
+  }
+  checks.push({
+    name: "env.STRIPE_PLAN_LIMITS",
+    status: limitsValid ? "pass" : "fail",
+    detail: limitsValid ? "Stripe plans have explicit verification entitlements" : "STRIPE_PLAN_LIMITS must be JSON with positive integer or null limits for all plans",
+  });
+
+  const appUrl = env.BILLING_APP_URL?.trim() || env.NEXT_PUBLIC_APP_URL?.trim();
+  let validAppUrl = false;
+  try {
+    const parsed = appUrl ? new URL(appUrl) : null;
+    validAppUrl = Boolean(parsed && (env.NODE_ENV !== "production" || parsed.protocol === "https:"));
+  } catch {
+    validAppUrl = false;
+  }
+  checks.push({
+    name: "env.BILLING_APP_URL",
+    status: validAppUrl ? "pass" : "fail",
+    detail: validAppUrl ? "Billing return URLs are configured" : "BILLING_APP_URL (or NEXT_PUBLIC_APP_URL) must be a valid URL and HTTPS in production",
+  });
+  return checks;
+}
+
 function isPlaceholderValue(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   return PLACEHOLDER_VALUES.has(normalized) || PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(normalized));
@@ -278,6 +458,14 @@ function isValidHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
     return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "https:";
   } catch {
     return false;
   }

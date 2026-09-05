@@ -5,6 +5,9 @@ const VERSION_HEADER = "X-IntentGuard-Version";
 
 function withVersionHeader(res: NextResponse): NextResponse {
   res.headers.set(VERSION_HEADER, API_VERSION);
+  // Decisions, entitlements, and audit responses are workspace-scoped and must
+  // never be served from an intermediary cache to another caller.
+  res.headers.set("Cache-Control", "no-store");
   return res;
 }
 

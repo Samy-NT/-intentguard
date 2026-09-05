@@ -265,9 +265,9 @@ export default function IntegrationsPage() {
   );
 
   return (
-    <div className="flex min-h-screen aurel-bg text-white">
+    <div className="flex min-h-screen flex-col aurel-bg text-white lg:flex-row">
       <Sidebar />
-      <main className="ml-64 flex-1 p-8">
+      <main className="flex-1 p-4 sm:p-8 lg:ml-64">
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>

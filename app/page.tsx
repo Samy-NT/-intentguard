@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
-import { Activity, FileCheck2, Moon, Shield, SunMedium } from "lucide-react";
+import { Activity, BookOpen, Code2, FileCheck2, Mail, Moon, Shield, ShieldCheck, SunMedium } from "lucide-react";
 import { HeroSceneFallback } from "@/app/components/hero/HeroSceneFallback";
 import type {
   RulesLayerResult,
@@ -26,21 +26,21 @@ const HeroScene = dynamic(() => import("@/app/components/hero/HeroScene"), {
 const FEATURES = [
   {
     icon: Shield,
-    title: "Policy checkpoint",
-    description:
-      "Action limits, approved targets, blocked routes, and per-agent controls are evaluated before an autonomous decision can leave the system.",
+    title: "Policy",
+    description: "Checks targets, limits, routes, and permissions before execution.",
+    tone: "border-emerald-500/45 bg-emerald-950/15",
   },
   {
     icon: Activity,
-    title: "Behavioral pressure",
-    description:
-      "Velocity windows expose unusual bursts, retries, domain drift, and actions that no longer match the agent's normal operating lane.",
+    title: "Behavior",
+    description: "Flags unusual bursts, retries, drift, and repeated attempts.",
+    tone: "border-amber-500/45 bg-amber-950/15",
   },
   {
     icon: FileCheck2,
-    title: "Signed decision record",
-    description:
-      "Every verdict produces an audit entry with the payload hash, policy version, execution node, and decision signature.",
+    title: "Evidence",
+    description: "Signs each verdict with policy, payload, node, and timestamp.",
+    tone: "border-sky-500/45 bg-sky-950/15",
   },
 ];
 
@@ -123,11 +123,12 @@ const PRICING = [
 ];
 
 const NAV_ITEMS = [
-  { label: "Layers", href: "#features" },
-  { label: "Demo", href: "#demo" },
-  { label: "API", href: "#api" },
-  { label: "Docs", href: "/docs" },
-  { label: "Contact", href: "#contact" },
+  { label: "Capabilities", href: "/capabilities", icon: ShieldCheck },
+  { label: "Layers", href: "#features", icon: Shield },
+  { label: "Demo", href: "#demo", icon: Activity },
+  { label: "API", href: "#api", icon: Code2 },
+  { label: "Docs", href: "/docs", icon: BookOpen },
+  { label: "Contact", href: "#contact", icon: Mail },
 ] as const;
 
 type ThemeMode = "light" | "dark";
@@ -255,11 +256,11 @@ function ConsoleDivider() {
   return <div className="border-t border-zinc-800/60 my-3" />;
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
+function FieldLabel({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
   return (
-    <div className="text-[10px] tracking-[0.12em] text-zinc-600 uppercase mb-1.5 font-mono">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[10px] font-mono uppercase tracking-[0.12em] text-zinc-600">
       {children}
-    </div>
+    </label>
   );
 }
 
@@ -269,20 +270,23 @@ function MonoInput({
   placeholder,
   type = "text",
   className = "",
+  id,
 }: {
   value: string | number;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
   className?: string;
+  id?: string;
 }) {
   return (
     <input
       type={type}
+      id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-3 py-2 focus:outline-none focus:border-stone-400/60 placeholder-zinc-700 transition-colors ${className}`}
+      className={`aurel-demo-input w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-3 py-2 focus:outline-none focus:border-stone-400/60 placeholder-zinc-700 transition-colors ${className}`}
     />
   );
 }
@@ -587,7 +591,7 @@ function SemanticMissionPanel({ s, lightMode }: { s: SemanticSignals; lightMode:
               {vectors.map((v) => (
                 <span
                   key={v}
-                  className={`border px-1.5 py-0.5 rounded text-[9px] tracking-wide uppercase ${vectorColors[v] ?? "border-zinc-700 text-zinc-500"}`}
+                  className={`border px-1.5 py-0.5 text-[9px] tracking-wide uppercase ${vectorColors[v] ?? "border-zinc-700 text-zinc-500"}`}
                 >
                   {v.replace(/_/g, " ")}
                 </span>
@@ -701,7 +705,7 @@ const GHOST_VELOCITY = [
 function GhostedPipeline({ lightMode }: { lightMode: boolean }) {
   return (
     <div className="relative select-none h-full overflow-hidden" style={{ minHeight: "540px" }}>
-      <div className="opacity-[0.28] pointer-events-none space-y-5">
+      <div className={`${lightMode ? "opacity-[0.72]" : "opacity-[0.28]"} pointer-events-none space-y-5`}>
         {/* Ghost layer 1 */}
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -787,7 +791,7 @@ function GhostedPipeline({ lightMode }: { lightMode: boolean }) {
 function GhostedDecision({ computing, lightMode }: { computing: boolean; lightMode: boolean }) {
   return (
     <div className="relative select-none h-full overflow-hidden" style={{ minHeight: "400px" }}>
-      <div className="opacity-[0.22] pointer-events-none space-y-4">
+      <div className={`${lightMode ? "opacity-[0.70]" : "opacity-[0.22]"} pointer-events-none space-y-4`}>
         <div className="space-y-1.5">
           {[
             ["intent_id", "ig_mqqo1x3f_e8ab2"],
@@ -858,7 +862,7 @@ function GhostedDecision({ computing, lightMode }: { computing: boolean; lightMo
       <div className="absolute inset-0 flex items-center justify-center">
         {computing ? (
           <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500">
-            <span className="w-3 h-3 border border-zinc-700 border-t-stone-300 rounded-full animate-spin" />
+            <span className="w-3 h-3 border border-zinc-700 border-t-stone-300 animate-spin" />
             Computing verdict…
           </div>
         ) : (
@@ -946,7 +950,7 @@ function PipelineColHeader({
         {label}
       </span>
       <span className={`flex items-center gap-1.5 text-[10px] tracking-wider font-mono flex-shrink-0 ${cfg.text}`}>
-        <span className={`w-1.5 h-1.5 rounded-full inline-block ${cfg.dot} ${cfg.pulse ? "animate-pulse" : ""}`} />
+        <span className={`w-1.5 h-1.5 inline-block ${cfg.dot} ${cfg.pulse ? "animate-pulse" : ""}`} />
         {cfg.label}
       </span>
     </div>
@@ -1138,12 +1142,12 @@ export default function HomePage() {
           <div className="hidden items-center gap-5 font-mono text-[11px] uppercase tracking-[0.16em] text-stone-500 lg:flex">
             {NAV_ITEMS.map((item) =>
               item.href.startsWith("#") ? (
-                <a key={item.label} href={item.href} className="transition-all duration-200 hover:-translate-y-0.5 hover:text-stone-900">
-                  {item.label}
+                <a key={item.label} href={item.href} className="inline-flex items-center gap-1.5 transition-all duration-200 hover:-translate-y-0.5 hover:text-stone-900">
+                  <item.icon className="h-3.5 w-3.5" aria-hidden />{item.label}
                 </a>
               ) : (
-                <Link key={item.label} href={item.href} className="transition-all duration-200 hover:-translate-y-0.5 hover:text-stone-900">
-                  {item.label}
+                <Link key={item.label} href={item.href} className="inline-flex items-center gap-1.5 transition-all duration-200 hover:-translate-y-0.5 hover:text-stone-900">
+                  <item.icon className="h-3.5 w-3.5" aria-hidden />{item.label}
                 </Link>
               )
             )}
@@ -1152,7 +1156,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="group inline-flex items-center gap-1.5 rounded-full border border-stone-300/70 bg-white/70 px-2.5 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-stone-600 opacity-85 transition-all duration-300 hover:opacity-100 hover:border-stone-400/70 hover:bg-white active:scale-95"
+            className="group inline-flex items-center gap-1.5 border border-stone-300/70 bg-white/70 px-2.5 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-stone-600 opacity-85 transition-all duration-300 hover:opacity-100 hover:border-stone-400/70 hover:bg-white active:scale-95"
               aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
             >
               <span className="relative flex h-3.5 w-3.5 items-center justify-center overflow-hidden">
@@ -1193,10 +1197,23 @@ export default function HomePage() {
             <div className="aurel-reveal aurel-delay-3 mt-10 flex flex-col gap-3 sm:flex-row">
               <a
                 href="#demo"
-                className="aurel-action aurel-action-light inline-flex items-center justify-center gap-3 border border-stone-100 bg-stone-100 px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
+                className="aurel-action aurel-action-light hidden items-center justify-center gap-3 border border-stone-100 bg-stone-100 px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-white lg:inline-flex"
               >
                 Run console
                 <span aria-hidden>↓</span>
+              </a>
+              <a
+                href="#contact"
+                className="aurel-action aurel-action-light inline-flex items-center justify-center gap-3 border border-stone-100 bg-stone-100 px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.16em] text-black transition-colors hover:bg-white lg:hidden"
+              >
+                Request pilot access
+                <span aria-hidden>→</span>
+              </a>
+              <a
+                href="#contact"
+                className="aurel-link hidden items-center justify-center px-3 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.16em] sm:inline-flex"
+              >
+                Request pilot access →
               </a>
             </div>
           </div>
@@ -1251,7 +1268,7 @@ export default function HomePage() {
       <section id="demo" className="aurel-reveal-section px-4 pt-20 pb-20 md:px-6 lg:px-8">
         {/* Section header */}
         <div className="mx-auto max-w-7xl pb-6">
-          <div className="grid gap-5 rounded-[1.75rem] border border-stone-200/70 bg-white/70 px-5 py-6 shadow-[0_24px_80px_rgba(28,25,23,0.08)] backdrop-blur-sm lg:grid-cols-[0.75fr_1fr] lg:items-end md:px-6 md:py-7">
+          <div className="grid gap-5 border border-stone-200/70 bg-white/70 px-5 py-6 shadow-[0_24px_80px_rgba(28,25,23,0.08)] backdrop-blur-sm lg:grid-cols-[0.75fr_1fr] lg:items-end md:px-6 md:py-7">
             <div>
               <div className={`mb-3 font-mono text-[10px] uppercase tracking-[0.2em] ${demoMetaTone}`}>
                 Live console / no signup required
@@ -1272,7 +1289,7 @@ export default function HomePage() {
         </div>
 
         {/* Console block — full width */}
-        <div className="aurel-surface-line mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-stone-200/70 shadow-[0_30px_100px_rgba(28,25,23,0.12)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_36px_120px_rgba(28,25,23,0.16)]" style={consoleShellStyle}>
+        <div className="aurel-surface-line mx-auto max-w-7xl overflow-hidden border border-stone-200/70 shadow-[0_30px_100px_rgba(28,25,23,0.12)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_36px_120px_rgba(28,25,23,0.16)]" style={consoleShellStyle}>
           {/* Desktop 3-column */}
           <div
             className="hidden h-[720px] lg:grid"
@@ -1284,20 +1301,21 @@ export default function HomePage() {
               {/* Scrollable fields */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                 <div>
-                  <FieldLabel>agent_id</FieldLabel>
-                  <MonoInput value={agentId} onChange={(v) => { setAgentId(v); setActiveScenario(null); }} placeholder="ag_expense_manager_v2" />
+                  <FieldLabel htmlFor="demo-agent-id">agent_id</FieldLabel>
+                  <MonoInput id="demo-agent-id" value={agentId} onChange={(v) => { setAgentId(v); setActiveScenario(null); }} placeholder="ag_expense_manager_v2" />
                 </div>
                 <div className="grid grid-cols-[1fr_80px] gap-2">
                   <div>
-                    <FieldLabel>amount</FieldLabel>
-                    <MonoInput type="number" value={amount} onChange={(v) => setAmount(Number(v))} placeholder="0" />
+                    <FieldLabel htmlFor="demo-amount">amount</FieldLabel>
+                    <MonoInput id="demo-amount" type="number" value={amount} onChange={(v) => setAmount(Number(v))} placeholder="0" />
                   </div>
                   <div>
-                    <FieldLabel>currency</FieldLabel>
+                    <FieldLabel htmlFor="demo-currency">currency</FieldLabel>
                     <select
+                      id="demo-currency"
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-2 py-2 focus:outline-none focus:border-stone-400/60 transition-colors"
+                      className={`w-full border border-zinc-800 px-2 py-2 text-xs font-mono focus:outline-none focus:border-stone-400/60 transition-colors ${isLight ? "bg-white text-stone-900" : "bg-zinc-900 text-[#e2e8f0]"}`}
                     >
                       {["USD", "EUR", "GBP", "ETH", "USDC", "USDT", "BTC"].map((c) => (
                         <option key={c}>{c}</option>
@@ -1306,23 +1324,24 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div>
-                  <FieldLabel>recipient</FieldLabel>
-                  <MonoInput value={recipient} onChange={setRecipient} placeholder="billing@vendor.com" />
+                  <FieldLabel htmlFor="demo-recipient">recipient</FieldLabel>
+                  <MonoInput id="demo-recipient" value={recipient} onChange={setRecipient} placeholder="billing@vendor.com" />
                 </div>
                 <ConsoleDivider />
                 <div>
-                  <FieldLabel>Agent Execution Trace</FieldLabel>
+                  <FieldLabel htmlFor="demo-trace">Agent Execution Trace</FieldLabel>
                   <textarea
+                    id="demo-trace"
                     value={agentContext}
                     onChange={(e) => setAgentContext(e.target.value)}
                     rows={9}
                     placeholder={"// Agent reasoning, received messages,\n// tool outputs, email content...\n// Paste the full execution context."}
-                    className="w-full bg-zinc-900 border border-zinc-800 text-[#e2e8f0] text-xs font-mono px-3 py-2.5 focus:outline-none focus:border-stone-400/60 placeholder-zinc-700 resize-none transition-colors leading-relaxed"
+                    className={`w-full border border-zinc-800 px-3 py-2.5 text-xs font-mono focus:outline-none focus:border-stone-400/60 placeholder-zinc-700 resize-none transition-colors leading-relaxed ${isLight ? "bg-white text-stone-900" : "bg-zinc-900 text-[#e2e8f0]"}`}
                   />
                 </div>
                 <div>
-                  <FieldLabel>Declared Mission Scope (optional)</FieldLabel>
-                  <MonoInput value={missionScope} onChange={setMissionScope} placeholder="Agent's stated operational scope" />
+                  <FieldLabel htmlFor="demo-mission-scope">Declared Mission Scope (optional)</FieldLabel>
+                  <MonoInput id="demo-mission-scope" value={missionScope} onChange={setMissionScope} placeholder="Agent's stated operational scope" />
                 </div>
                 <ConsoleDivider />
                 <div>
@@ -1366,7 +1385,7 @@ export default function HomePage() {
                 >
                   {isRunning ? (
                     <span className="flex items-center justify-center gap-2.5">
-                      <span className="w-3 h-3 border border-zinc-500/30 border-t-stone-900 rounded-full animate-spin" />
+                      <span className="w-3 h-3 border border-zinc-500/30 border-t-stone-900 animate-spin" />
                       Verifying…
                     </span>
                   ) : (
@@ -1386,7 +1405,7 @@ export default function HomePage() {
               {/* Running micro-banner — sits between header and scrollable body */}
               {isRunning && (
                 <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 border-b border-zinc-800/40" style={panelStyle("#080808", "#f5f1e8")}>
-                  <span className="w-2.5 h-2.5 border border-zinc-700 border-t-stone-300 rounded-full animate-spin" />
+                  <span className="w-2.5 h-2.5 border border-zinc-700 border-t-stone-300 animate-spin" />
                   <span className="text-[10px] font-mono tracking-widest uppercase text-stone-400/60 animate-pulse">
                     routing through security pipeline
                   </span>
@@ -1588,18 +1607,14 @@ export default function HomePage() {
               </h2>
             </div>
             <p className="max-w-2xl text-lg leading-8 text-stone-400">
-              Aurels treats agent intent as infrastructure, not content moderation.
-              The system checks what the agent is doing, whether it is allowed, and
-              whether the record can be trusted later.
+              Aurels checks the action, the operating lane, and the evidence before a tool runs.
             </p>
           </div>
-          <div className="grid border border-stone-800 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             {FEATURES.map((f, i) => (
               <div
                 key={i}
-                className={`aurel-surface-line group relative min-h-[280px] bg-black/55 p-7 transition-colors hover:bg-stone-950/60 ${
-                  i < FEATURES.length - 1 ? "border-b border-stone-800 md:border-b-0 md:border-r" : ""
-                }`}
+                className={`aurel-surface-line group relative min-h-[250px] border p-7 transition-colors hover:bg-stone-950/60 ${f.tone}`}
               >
                 <div className="relative">
                   <div className="mb-10 flex items-center justify-between">
@@ -1613,6 +1628,7 @@ export default function HomePage() {
                   <h3 className="mb-4 text-xl font-black uppercase tracking-tight text-stone-100">{f.title}</h3>
                   <p className="text-sm leading-7 text-stone-500">{f.description}</p>
                 </div>
+                {i < FEATURES.length - 1 && <span aria-hidden className="absolute -right-5 top-1/2 z-10 hidden -translate-y-1/2 border border-stone-700 bg-stone-950 px-2 py-1 font-mono text-xs text-stone-400 md:block">→</span>}
               </div>
             ))}
           </div>
@@ -1779,12 +1795,15 @@ export default function HomePage() {
           </div>
           <span>The intent firewall for autonomous actions</span>
           <div className="flex items-center gap-4">
-            <Link href="/ai-index" className="transition-colors hover:text-stone-300">AI Index</Link>
-            <Link href="/docs" className="transition-colors hover:text-stone-300">Docs</Link>
+            <Link href="/capabilities" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><ShieldCheck className="h-3.5 w-3.5" />Capabilities</Link>
+            <Link href="/ai-index" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><Activity className="h-3.5 w-3.5" />AI Index</Link>
+            <Link href="/docs" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><BookOpen className="h-3.5 w-3.5" />Docs</Link>
             <Link href="/security" className="transition-colors hover:text-stone-300">Security</Link>
             <Link href="/benchmark" className="transition-colors hover:text-stone-300">Benchmark</Link>
             <Link href="/plugins" className="transition-colors hover:text-stone-300">Plugins</Link>
             <Link href="/startup" className="transition-colors hover:text-stone-300">Startup</Link>
+            <Link href="/mentions-legales" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><ShieldCheck className="h-3.5 w-3.5" />Mentions légales</Link>
+            <Link href="/politique-de-confidentialite" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><Shield className="h-3.5 w-3.5" />Confidentialité</Link>
           </div>
         </div>
       </footer>

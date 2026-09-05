@@ -13,7 +13,7 @@ const payload: MandatePayload = {
   mandate_id: "mandate_test",
   workspace_id: "ws_1",
   issued_at: "2026-09-01T10:00:00.000Z",
-  expires_at: "2026-09-02T10:00:00.000Z",
+  expires_at: "2030-09-02T10:00:00.000Z",
   mission_scope: "Manage approved SaaS renewals",
   agent_id: "agent_1",
   max_amount: 500,
@@ -84,7 +84,11 @@ describe("signed mandates", () => {
 
   it("blocks expired mandates", () => {
     process.env.MANDATE_SIGNING_SECRET = "mandate-secret";
-    const result = evaluateMandate(intent(), signed(), new Date("2026-09-03T11:00:00.000Z"));
+    const result = evaluateMandate(
+      intent(),
+      signed({ expires_at: "2026-09-02T10:00:00.000Z" }),
+      new Date("2026-09-03T11:00:00.000Z")
+    );
     expect(result).toMatchObject({ decision: "block", reason: "Mandate has expired" });
   });
 

@@ -47,6 +47,9 @@ export interface AurelSecurityDecision {
   rewrittenArguments?: unknown;
   traceId?: string;
   policyVersion?: string;
+  auditSignature?: string;
+  auditSignatureVersion?: string;
+  evaluatedAt?: string;
 }
 
 export interface AurelActionTelemetry {
@@ -119,6 +122,21 @@ export interface AuditVerificationResult {
   intent_id?: string;
   audit_signature?: string;
   record?: AuditDecisionRecord;
+}
+
+export interface ActionAuditRecord {
+  workspace_id: string;
+  action_id: string;
+  integration: string;
+  agent_id: string | null;
+  decision: AurelDecision;
+  reason: string | null;
+  risk_score: number;
+  rule_ids: string[];
+  policy_version: string | null;
+  trace_id: string | null;
+  payload_hash: string;
+  evaluated_at: string;
 }
 
 export class IntentGuardError extends Error {
@@ -231,6 +249,23 @@ export class IntentGuardClient {
     audit_signature_version?: string;
   }): Promise<AuditVerificationResult> {
     return this.request<AuditVerificationResult>("/api/v1/audit/verify", {
+      method: "POST",
+      body: stringifyAurelPayload(input),
+    });
+  }
+
+  async exportActionAuditLogs(format: "json" | "csv" = "json", limit = 500): Promise<unknown> {
+    const path = `/api/v1/workspace/action-audit-export?format=${encodeURIComponent(format)}&limit=${limit}`;
+    if (format === "csv") return this.requestText(path);
+    return this.request(path);
+  }
+
+  async verifyActionAuditRecord(input: {
+    record: ActionAuditRecord;
+    audit_signature: string;
+    audit_signature_version?: string;
+  }): Promise<AuditVerificationResult> {
+    return this.request<AuditVerificationResult>("/api/v1/audit/action-verify", {
       method: "POST",
       body: stringifyAurelPayload(input),
     });

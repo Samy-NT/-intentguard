@@ -3,10 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { KeyRound, Mail, ShieldCheck } from "lucide-react";
+import { AurelAuthHeader } from "@/app/components/AurelPublicShell";
 
 export default function SignupPage() {
   return (
-    <div className="aurel-bg flex min-h-screen items-center justify-center p-4">
+    <div className="aurel-bg min-h-screen">
+      <AurelAuthHeader />
+      <div className="flex items-center justify-center p-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-3">
@@ -24,26 +27,27 @@ export default function SignupPage() {
           <div className="mb-6 flex items-start gap-3 border border-amber-500/30 bg-amber-500/10 p-4">
             <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-300" />
             <p className="text-sm leading-6 text-amber-100/75">
-              Self-serve account creation is not enabled yet. Use a workspace API key to sign in,
-              or request pilot access for a manually provisioned workspace.
+              Dashboard identity uses Supabase Auth. Your email must be linked to a workspace member
+              before the secure sign-in link can open the dashboard.
             </p>
           </div>
 
           <div className="space-y-3">
             <Link href="/auth/login" className="aurel-button flex items-center justify-center gap-2 py-3">
-              <KeyRound className="h-4 w-4" />
-              Sign in with API key
+              <Mail className="h-4 w-4" />
+              Sign in with email
             </Link>
             <Link href="/support" className="aurel-button-ghost flex items-center justify-center gap-2 py-3">
-              <Mail className="h-4 w-4" />
+              <KeyRound className="h-4 w-4" />
               Request pilot access
             </Link>
           </div>
         </div>
 
         <p className="mt-6 text-center text-sm text-stone-500">
-          Dashboard user accounts, SSO, and invite flows are tracked in the production readiness audit.
+          Workspace admins can keep API keys for agent integrations while operators use first-party dashboard identity.
         </p>
+      </div>
       </div>
     </div>
   );

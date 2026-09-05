@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Sidebar } from "@/app/components/Sidebar";
 import { AlertTriangle, CheckCircle2, CreditCard, Lock, Mail } from "lucide-react";
+import { BillingCheckout } from "@/app/billing/BillingCheckout";
 
 const PLANS = [
   {
@@ -43,26 +44,26 @@ const PLANS = [
 
 export default function BillingPage() {
   return (
-    <div className="flex min-h-screen aurel-bg">
-      <Sidebar />
+    <div className="flex min-h-screen flex-col aurel-bg lg:flex-row">
+      <Sidebar variant="public" />
 
-      <main className="ml-64 flex-1 p-8">
+      <main className="flex-1 p-4 sm:p-8 lg:ml-64">
         <div className="mx-auto max-w-6xl">
           <div className="aurel-kicker mb-3">Billing / beta access</div>
           <h1 className="aurel-title mb-2 text-4xl">Billing</h1>
           <p className="mb-8 max-w-3xl text-stone-400">
-            Self-serve billing is not enabled in this build. Production pilots should be approved
-            manually, then configured with scoped API keys, webhook/SIEM settings, and a signed audit policy.
+            Billing is manual by default. Production pilots can enable the optional Stripe checkout only after
+            provider configuration, webhook verification, and entitlement limits have passed readiness checks.
           </p>
 
           <div className="mb-8 border border-amber-500/30 bg-amber-500/10 p-5">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-300" />
               <div>
-                <h2 className="text-sm font-semibold text-amber-200">No automatic charges</h2>
+                <h2 className="text-sm font-semibold text-amber-200">Explicit billing mode</h2>
                 <p className="mt-1 text-sm leading-6 text-amber-100/70">
-                  Upgrade and payment-method flows are disabled until a real billing provider is wired in.
-                  Manual workspace status and verification limits are enforced from Settings until a provider owns subscription state.
+                  Manual workspace status and verification limits are always enforced from Settings. When Stripe is
+                  explicitly enabled, checkout, signed provider webhooks, and admin sync own subscription state; otherwise no charges occur.
                 </p>
               </div>
             </div>
@@ -97,13 +98,10 @@ export default function BillingPage() {
                 <CreditCard className="h-5 w-5 text-stone-300" />
                 <h2 className="text-lg font-semibold text-white">Payment method</h2>
               </div>
-              <div className="border border-stone-800 bg-zinc-900/70 p-4">
-                <div className="font-medium text-white">Not configured</div>
-                <p className="mt-1 text-sm text-stone-400">
-                  Add Stripe or another billing provider before enabling self-serve paid plan changes.
-                  Until then, admins can suspend a workspace or set monthly verification limits in Settings.
-                </p>
-              </div>
+              <BillingCheckout />
+              <p className="mt-3 text-xs text-stone-500">
+                Checkout, customer portal, and Sync are available only when the Stripe provider is explicitly enabled. Webhooks remain the normal source of truth; Sync reconciles a linked subscription when operators need to verify provider state.
+              </p>
             </section>
 
             <section className="aurel-panel p-6">

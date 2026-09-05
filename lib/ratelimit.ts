@@ -61,7 +61,7 @@ function getRedisLimiter(): Ratelimit | null {
     });
     return redisLimiter;
   } catch (e) {
-    console.warn("[ratelimit] Failed to create Redis limiter, using memory fallback:", e);
+    console.warn("[ratelimit] Failed to create Redis limiter; production callers will fail closed:", e);
     return null;
   }
 }
@@ -86,7 +86,7 @@ function getNamedRedisLimiter(prefix: string, limit: number, window: `${number} 
     limiterCache.set(cacheKey, limiter);
     return limiter;
   } catch (e) {
-    console.warn(`[ratelimit] Failed to create ${prefix} limiter, using memory fallback:`, e);
+    console.warn(`[ratelimit] Failed to create ${prefix} limiter; production callers will fail closed:`, e);
     return null;
   }
 }
@@ -101,6 +101,18 @@ export interface RateLimitResult {
   resetAt: number;
 }
 
+function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+function unavailableRateLimit(windowMs: number): RateLimitResult {
+  return {
+    allowed: false,
+    remaining: 0,
+    resetAt: Date.now() + Math.max(1_000, Math.min(windowMs, 10_000)),
+  };
+}
+
 export async function checkDemoRateLimit(identifier: string): Promise<RateLimitResult> {
   const limiter = getRedisLimiter();
 
@@ -113,9 +125,12 @@ export async function checkDemoRateLimit(identifier: string): Promise<RateLimitR
         resetAt: result.reset,
       };
     } catch (e) {
-      console.warn("[ratelimit] Redis error, falling back to memory:", e);
+      console.warn("[ratelimit] Redis error:", e);
+      if (isProduction()) return unavailableRateLimit(3_600_000);
     }
   }
+
+  if (isProduction()) return unavailableRateLimit(3_600_000);
 
   // In-memory fallback: 10 requests per hour
   const WINDOW_MS = 3_600_000;
@@ -145,9 +160,12 @@ export async function checkWorkspaceRateLimit(
         resetAt: result.reset,
       };
     } catch (e) {
-      console.warn("[ratelimit] Redis error, falling back to memory:", e);
+      console.warn("[ratelimit] Redis error:", e);
+      if (isProduction()) return unavailableRateLimit(windowMs);
     }
   }
+
+  if (isProduction()) return unavailableRateLimit(windowMs);
 
   const allowed = memoryRateLimit(`verify:${workspaceId}`, limit, windowMs);
   const entry = memoryStore.get(`verify:${workspaceId}`)!;
@@ -174,11 +192,47 @@ export async function checkLoginRateLimit(
         resetAt: result.reset,
       };
     } catch (e) {
-      console.warn("[ratelimit] Redis error, falling back to memory:", e);
+      console.warn("[ratelimit] Redis error:", e);
+      if (isProduction()) return unavailableRateLimit(windowMs);
     }
   }
 
+  if (isProduction()) return unavailableRateLimit(windowMs);
+
   const key = `login:${identifier}`;
+  const allowed = memoryRateLimit(key, limit, windowMs);
+  const entry = memoryStore.get(key)!;
+  return {
+    allowed,
+    remaining: allowed ? limit - entry.count : 0,
+    resetAt: entry.resetAt,
+  };
+}
+
+export async function checkSupportRateLimit(
+  identifier: string,
+  limit = 5,
+  windowMs = 10 * 60_000
+): Promise<RateLimitResult> {
+  const limiter = getNamedRedisLimiter("ig:support:rl", limit, "10 m");
+
+  if (limiter) {
+    try {
+      const result = await limiter.limit(identifier);
+      return {
+        allowed: result.success,
+        remaining: result.remaining,
+        resetAt: result.reset,
+      };
+    } catch (e) {
+      console.warn("[ratelimit] Redis error:", e);
+      if (isProduction()) return unavailableRateLimit(windowMs);
+    }
+  }
+
+  if (isProduction()) return unavailableRateLimit(windowMs);
+
+  const key = `support:${identifier}`;
   const allowed = memoryRateLimit(key, limit, windowMs);
   const entry = memoryStore.get(key)!;
   return {

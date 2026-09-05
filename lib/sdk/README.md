@@ -49,6 +49,10 @@ const verification = await intentguard.verifyAuditRecord({
 });
 ```
 
+Generic tool-call audits use the same flow through `verifyActionAuditRecord` and carry
+an `action-audit-v1-hmac-sha256` signature. The stored record contains only the canonical
+payload hash, never raw tool arguments.
+
 ## Adapters
 
 ```ts

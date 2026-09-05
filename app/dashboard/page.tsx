@@ -1208,7 +1208,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen aurel-bg">
+    <div className="flex min-h-screen flex-col aurel-bg lg:flex-row">
       <Sidebar />
       
       <main className="flex-1 lg:ml-64">
@@ -1376,7 +1376,7 @@ export default function DashboardPage() {
                         {apiKey.trim() ? (
                           <>
                             Send a request to{" "}
-                            <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">POST /api/verify</code>
+                            <code className="bg-zinc-800 px-1.5 py-0.5 text-zinc-500">POST /api/verify</code>
                             {" "}to see logs here.
                           </>
                         ) : (
@@ -1428,7 +1428,7 @@ export default function DashboardPage() {
                             <div className="text-xs font-mono mt-0.5 text-zinc-600">{formatTime(log.created_at)}</div>
                           </td>
                           <td className="px-5 py-4">
-                            <code className="text-xs font-mono text-stone-400 bg-zinc-800/50 px-2 py-0.5 rounded">
+                                    <code className="text-xs font-mono text-stone-400 bg-zinc-800/50 px-2 py-0.5">
                               {log.intent_id.length > 16 ? log.intent_id.slice(0, 16) + "…" : log.intent_id}
                             </code>
                           </td>
