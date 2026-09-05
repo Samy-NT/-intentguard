@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
-import { Activity, ArrowRight, BookOpen, Code2, FileCheck2, ListChecks, Mail, Moon, Shield, ShieldCheck, SlidersHorizontal, SunMedium } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, BookOpen, Boxes, ChevronDown, Code2, FileCheck2, ListChecks, Mail, Moon, Rocket, Shield, ShieldCheck, SlidersHorizontal, SunMedium } from "lucide-react";
 import { HeroSceneFallback } from "@/app/components/hero/HeroSceneFallback";
 import type {
   RulesLayerResult,
@@ -1152,6 +1152,18 @@ export default function HomePage() {
                 </Link>
               )
             )}
+            <details className="group relative">
+              <summary className="flex cursor-pointer list-none items-center gap-1.5 transition-colors hover:text-stone-900 [&::-webkit-details-marker]:hidden">
+                Explore <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="absolute right-0 top-full z-50 mt-4 grid w-56 gap-1 border border-stone-700 bg-black/95 p-2 text-stone-400 shadow-2xl backdrop-blur-xl">
+                <Link href="/plugins" className="flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-stone-900 hover:text-stone-100"><Boxes className="h-3.5 w-3.5" />Plugins</Link>
+                <Link href="/benchmark" className="flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-stone-900 hover:text-stone-100"><BarChart3 className="h-3.5 w-3.5" />Benchmark</Link>
+                <Link href="/api-reference" className="flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-stone-900 hover:text-stone-100"><Code2 className="h-3.5 w-3.5" />API reference</Link>
+                <Link href="/security" className="flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-stone-900 hover:text-stone-100"><ShieldCheck className="h-3.5 w-3.5" />Security</Link>
+                <Link href="/startup" className="flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-stone-900 hover:text-stone-100"><Rocket className="h-3.5 w-3.5" />Startup</Link>
+              </div>
+            </details>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <button
@@ -1903,26 +1915,18 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-stone-800/80 px-5 py-8 md:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.14em] text-stone-600 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center border border-stone-800 bg-stone-100">
-              <Image src="/logo.png" alt="Aurels" width={16} height={16} className="h-4 w-4" />
-            </span>
-            <span>Aurels</span>
+      <footer className="border-t border-stone-800/80 px-5 py-12 md:px-8 md:py-16">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 border-b border-stone-800/80 pb-10 sm:grid-cols-2 lg:grid-cols-[1.35fr_1fr_1fr_1fr]">
+            <div>
+              <div className="mb-4 flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.2em] text-stone-200"><span className="flex h-6 w-6 items-center justify-center border border-stone-800 bg-stone-100"><Image src="/logo.png" alt="Aurels" width={16} height={16} className="h-4 w-4" /></span>Aurels</div>
+              <p className="max-w-xs text-sm leading-6 text-stone-500">The intent firewall for autonomous actions.</p>
+            </div>
+            <div><div className="mb-4 font-mono text-[10px] uppercase tracking-[0.18em] text-stone-600">Product</div><div className="grid gap-2 text-xs text-stone-500"><Link href="/capabilities" className="hover:text-stone-200">Capabilities</Link><Link href="/use-cases" className="hover:text-stone-200">Use cases</Link><Link href="/plugins" className="hover:text-stone-200">Plugins</Link><Link href="/billing" className="hover:text-stone-200">Billing</Link></div></div>
+            <div><div className="mb-4 font-mono text-[10px] uppercase tracking-[0.18em] text-stone-600">Resources</div><div className="grid gap-2 text-xs text-stone-500"><Link href="/docs" className="hover:text-stone-200">Documentation</Link><Link href="/api-reference" className="hover:text-stone-200">API reference</Link><Link href="/ai-index" className="hover:text-stone-200">AI Index</Link><Link href="/benchmark" className="hover:text-stone-200">Benchmark</Link><Link href="/security" className="hover:text-stone-200">Security</Link></div></div>
+            <div><div className="mb-4 font-mono text-[10px] uppercase tracking-[0.18em] text-stone-600">Company</div><div className="grid gap-2 text-xs text-stone-500"><Link href="/startup" className="hover:text-stone-200">Startup</Link><Link href="/support" className="hover:text-stone-200">Support</Link><Link href="/mentions-legales" className="hover:text-stone-200">Mentions légales</Link><Link href="/politique-de-confidentialite" className="hover:text-stone-200">Confidentialité</Link></div></div>
           </div>
-          <span>The intent firewall for autonomous actions</span>
-          <div className="flex items-center gap-4">
-            <Link href="/capabilities" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><ShieldCheck className="h-3.5 w-3.5" />Capabilities</Link>
-            <Link href="/ai-index" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><Activity className="h-3.5 w-3.5" />AI Index</Link>
-            <Link href="/docs" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><BookOpen className="h-3.5 w-3.5" />Docs</Link>
-            <Link href="/security" className="transition-colors hover:text-stone-300">Security</Link>
-            <Link href="/benchmark" className="transition-colors hover:text-stone-300">Benchmark</Link>
-            <Link href="/plugins" className="transition-colors hover:text-stone-300">Plugins</Link>
-            <Link href="/startup" className="transition-colors hover:text-stone-300">Startup</Link>
-            <Link href="/mentions-legales" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><ShieldCheck className="h-3.5 w-3.5" />Mentions légales</Link>
-            <Link href="/politique-de-confidentialite" className="inline-flex items-center gap-1.5 transition-colors hover:text-stone-300"><Shield className="h-3.5 w-3.5" />Confidentialité</Link>
-          </div>
+          <div className="flex flex-col gap-3 pt-6 font-mono text-[10px] uppercase tracking-[0.14em] text-stone-600 sm:flex-row sm:items-center sm:justify-between"><span>© {new Date().getFullYear()} Aurels</span><a href="mailto:aurels.dev@gmail.com" className="inline-flex items-center gap-1.5 hover:text-stone-300"><Mail className="h-3.5 w-3.5" />Contact aurels.dev@gmail.com</a></div>
         </div>
       </footer>
     </div>
