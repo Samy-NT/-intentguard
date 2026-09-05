@@ -46,5 +46,19 @@ export function corsHeaders(origin: string | null): HeadersInit {
 }
 
 export function corsDecisionForRequest(req: NextRequest): CorsDecision {
-  return evaluateCorsOrigin(req.headers.get("origin"));
+  const origin = req.headers.get("origin");
+  const allowedOrigins = parseAllowedOrigins();
+
+  // Same-origin browser requests are safe even when the optional external
+  // client allowlist has not been configured yet. Keep the explicit
+  // ALLOWED_ORIGINS requirement for cross-origin clients and readiness checks.
+  if (origin && allowedOrigins.length === 0) {
+    const requestOrigin = new URL(req.url).origin;
+    const configuredSiteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+    if (origin === requestOrigin || (configuredSiteOrigin && origin === configuredSiteOrigin)) {
+      return { allowed: true, origin };
+    }
+  }
+
+  return evaluateCorsOrigin(origin, allowedOrigins);
 }

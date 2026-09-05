@@ -1127,7 +1127,7 @@ export default function HomePage() {
 
   return (
     <div
-      className={`aurel-grid-drift min-h-screen overflow-x-hidden transition-colors duration-300 ${isLight ? "aurel-light text-stone-900" : "text-stone-100"}`}
+      className={`aurel-grid-drift min-h-screen overflow-x-clip transition-colors duration-300 ${isLight ? "aurel-light text-stone-900" : "text-stone-100"}`}
       style={pageStyle}
     >
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
@@ -1268,7 +1268,7 @@ export default function HomePage() {
       <section id="demo" className="aurel-reveal-section px-4 pt-20 pb-20 md:px-6 lg:px-8">
         {/* Section header */}
         <div className="mx-auto max-w-7xl pb-6">
-          <div className="grid gap-5 border border-stone-200/70 bg-white/70 px-5 py-6 shadow-[0_24px_80px_rgba(28,25,23,0.08)] backdrop-blur-sm lg:grid-cols-[0.75fr_1fr] lg:items-end md:px-6 md:py-7">
+          <div className={`grid gap-5 border border-stone-200/70 ${isLight ? "bg-white/70" : "bg-black/70"} px-5 py-6 shadow-[0_24px_80px_rgba(28,25,23,0.08)] backdrop-blur-sm lg:grid-cols-[0.75fr_1fr] lg:items-end md:px-6 md:py-7`}>
             <div>
               <div className={`mb-3 font-mono text-[10px] uppercase tracking-[0.2em] ${demoMetaTone}`}>
                 Live console / no signup required
