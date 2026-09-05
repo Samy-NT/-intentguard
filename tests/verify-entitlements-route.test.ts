@@ -42,6 +42,7 @@ vi.mock("@/lib/env", () => ({
 vi.mock("@/lib/audit", () => ({
   AUDIT_SIGNATURE_VERSION: "audit-v1-hmac-sha256",
   signAuditDecision: mocks.signAuditDecision,
+  canonicalizeAuditValue: (value: unknown) => JSON.stringify(value),
 }));
 
 vi.mock("@/lib/monitoring", () => ({

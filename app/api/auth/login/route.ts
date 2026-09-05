@@ -4,14 +4,15 @@ import { validateApiKey } from "@/lib/auth";
 import { createDashboardSession, sessionCookieHeader } from "@/lib/dashboard-session";
 import { checkLoginRateLimit } from "@/lib/ratelimit";
 import { createServerClient } from "@/lib/supabase/server";
+import { readBoundedJsonBody } from "@/lib/http/body";
+import { trustedClientIdentity } from "@/lib/request-identity";
 
 const LoginSchema = z.object({
   api_key: z.string().min(1),
 });
 
 function loginRateLimitIdentifier(req: NextRequest): string {
-  const forwardedFor = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwardedFor || req.headers.get("x-real-ip") || req.headers.get("origin") || "unknown";
+  return trustedClientIdentity(req);
 }
 
 export async function POST(req: NextRequest) {
@@ -28,12 +29,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const parsedBody = await readBoundedJsonBody(req, 4_000);
+  if (parsedBody instanceof Response) return parsedBody;
+  const body = parsedBody.body;
 
   const parsed = LoginSchema.safeParse(body);
   if (!parsed.success) {

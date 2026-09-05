@@ -4,6 +4,8 @@ import { err, json } from "@/lib/respond";
 import { captureError, recordLayerMetric } from "@/lib/monitoring";
 import { readBoundedJsonBody } from "@/lib/http/body";
 import { validateIdempotencyKeyHeader } from "@/lib/http/idempotency";
+import { checkWorkspaceRateLimit } from "@/lib/ratelimit";
+import { persistTelemetry } from "@/lib/action-telemetry";
 import type { NextRequest } from "next/server";
 
 const MAX_TELEMETRY_BODY_BYTES = 64_000;
@@ -13,6 +15,8 @@ export async function POST(req: NextRequest) {
   if (auth instanceof Response) return auth;
   const forbidden = requireRole(auth, "operator");
   if (forbidden) return forbidden;
+  const rateLimit = await checkWorkspaceRateLimit(auth.workspace_id);
+  if (!rateLimit.allowed) return err("Workspace action rate limit exceeded", 429);
   const invalidIdempotencyKey = validateIdempotencyKeyHeader(req);
   if (invalidIdempotencyKey) return invalidIdempotencyKey;
 
@@ -34,6 +38,8 @@ export async function POST(req: NextRequest) {
       workspace_id: auth.workspace_id,
       agent_id: telemetry.agent?.id,
     });
+    const persisted = await persistTelemetry(auth.db, auth.workspace_id, telemetry);
+    if (persisted.error) return err("Telemetry persistence unavailable", 503);
     return json({ accepted: true });
   } catch (error) {
     captureError(error, {

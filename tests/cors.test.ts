@@ -26,6 +26,21 @@ describe("api cors", () => {
     });
   });
 
+  it("denies arbitrary credentialed browser origins in production when no allowlist is configured", () => {
+    const env = process.env as Record<string, string | undefined>;
+    const previous = env.NODE_ENV;
+    env.NODE_ENV = "production";
+    try {
+      expect(evaluateCorsOrigin("https://evil.example.com", [])).toMatchObject({
+        allowed: false,
+        reason: "ALLOWED_ORIGINS is not configured",
+      });
+    } finally {
+      if (previous === undefined) delete env.NODE_ENV;
+      else env.NODE_ENV = previous;
+    }
+  });
+
   it("builds preflight headers for API key, csrf, authorization, and idempotency headers", () => {
     const headers = new Headers(corsHeaders("https://agent.example.com"));
 
@@ -50,9 +65,18 @@ describe("api cors", () => {
 
       expect(response.status).toBe(204);
       expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://agent.example.com");
+      expect(response.headers.get("X-Request-ID")).toMatch(/^[a-f0-9-]{36}$/);
     } finally {
       if (previous === undefined) delete process.env.ALLOWED_ORIGINS;
       else process.env.ALLOWED_ORIGINS = previous;
     }
+  });
+
+  it("preserves a valid request id and replaces unsafe values", () => {
+    const preserved = proxy(new NextRequest("http://localhost/api/health", { headers: { "x-request-id": "trace_123" } }));
+    expect(preserved.headers.get("X-Request-ID")).toBe("trace_123");
+
+    const replaced = proxy(new NextRequest("http://localhost/api/health", { headers: { "x-request-id": "bad id" } }));
+    expect(replaced.headers.get("X-Request-ID")).toMatch(/^[a-f0-9-]{36}$/);
   });
 });

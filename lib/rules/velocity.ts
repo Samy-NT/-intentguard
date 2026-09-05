@@ -45,8 +45,15 @@ export async function evaluateVelocityCount(
   const { count, error } = await query;
 
   if (error) {
-    // Fail open: log but don't block on DB errors
     console.error("[velocity_count] DB error:", error.message);
+    if (velocityFailClosed()) {
+      return {
+        decision: "block",
+        rule_id: rule.id,
+        reason: "Velocity control unavailable; verification is blocked until the audit store recovers",
+        risk_score: 100,
+      };
+    }
     return null;
   }
 
@@ -89,6 +96,14 @@ export async function evaluateVelocityAmount(
 
   if (error) {
     console.error("[velocity_amount] DB error:", error.message);
+    if (velocityFailClosed()) {
+      return {
+        decision: "block",
+        rule_id: rule.id,
+        reason: "Velocity control unavailable; verification is blocked until the audit store recovers",
+        risk_score: 100,
+      };
+    }
     return null;
   }
 
@@ -105,4 +120,12 @@ export async function evaluateVelocityAmount(
   }
 
   return null;
+}
+
+/** Production defaults to fail-closed; local/test environments remain available during development. */
+function velocityFailClosed(): boolean {
+  const configured = process.env.AUREL_VELOCITY_FAIL_MODE?.trim().toLowerCase();
+  if (configured === "open") return false;
+  if (configured === "closed") return true;
+  return process.env.NODE_ENV === "production";
 }

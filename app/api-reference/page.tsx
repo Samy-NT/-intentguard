@@ -73,6 +73,29 @@ export default function ApiReferencePage() {
         </section>
 
         <section className="mt-10 border-t border-stone-800 pt-10">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-stone-100">POST /api/v1/actions/evaluate</h2>
+          <p className="mt-3 text-stone-400">
+            Protects non-payment tool calls with the same pre-execution checkpoint. The response is
+            idempotent per workspace/action id and includes a signed audit signature. Tool arguments
+            are hashed, not persisted.
+          </p>
+          <pre className="mt-6 overflow-x-auto border border-stone-800 bg-black p-5 font-mono text-sm text-stone-200">{`curl -X POST https://aurels.dev/api/v1/actions/evaluate \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: YOUR_OPERATOR_KEY" \\
+  -d '{
+    "version": "1",
+    "integration": "mcp",
+    "action": { "id": "act_42", "name": "read_file", "arguments": { "path": "README.md" } },
+    "agent": { "id": "agent_1" },
+    "timestamp": "2026-09-02T10:00:00.000Z"
+  }'`}</pre>
+          <p className="mt-3 text-sm text-stone-500">
+            Use <code className="mx-1 text-stone-300">POST /api/v1/audit/action-verify</code> to verify
+            the exported signature independently.
+          </p>
+        </section>
+
+        <section className="mt-10 border-t border-stone-800 pt-10">
           <h2 className="text-2xl font-black uppercase tracking-tight text-stone-100">POST /api/v1/mandates</h2>
           <p className="mt-3 text-stone-400">
             Issues a signed mandate that constrains a later verification request to a mission scope,
@@ -102,6 +125,39 @@ export default function ApiReferencePage() {
             When AP2 bindings are present, verification requests must include matching
             <code className="mx-1 text-stone-300">metadata.checkout_hash</code>
             and/or <code className="mx-1 text-stone-300">metadata.transaction_id</code>.
+          </p>
+        </section>
+
+        <section className="mt-10 border-t border-stone-800 pt-10">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-stone-100">GET /api/v1/workspace/action-telemetry</h2>
+          <p className="mt-3 text-stone-400">
+            Query durable post-execution events captured by integrations. Events are workspace-scoped,
+            deduplicated by canonical hash, and stored with sensitive fields redacted. Filter with
+            <code className="mx-1 text-stone-200">?action_id=...</code> when tracing one tool call.
+          </p>
+        </section>
+
+        <section className="mt-10 border-t border-stone-800 pt-10">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-stone-100">Billing (optional Stripe)</h2>
+          <p className="mt-3 text-stone-400">
+            Admins can start a subscription checkout with <code className="text-stone-200">POST /api/v1/billing/checkout</code>,
+            open the Stripe-hosted customer portal with <code className="text-stone-200">POST /api/v1/billing/portal</code>,
+            and reconcile a linked subscription with <code className="text-stone-200">POST /api/v1/billing/reconcile</code>.
+            Stripe sends signed events to <code className="text-stone-200">POST /api/v1/billing/webhook</code>; provider events are
+            deduplicated before workspace entitlements are updated. Leave <code className="text-stone-200">BILLING_PROVIDER</code>
+            empty to keep manual pilot billing.
+          </p>
+        </section>
+
+        <section className="mt-10 border-t border-stone-800 pt-10">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-stone-100">Workspace members</h2>
+          <p className="mt-3 text-stone-400">
+            Admins can manage human dashboard access with <code className="text-stone-200">GET /api/v1/workspace/members</code>,
+            <code className="text-stone-200"> POST /api/v1/workspace/members</code>, and
+            <code className="text-stone-200"> DELETE /api/v1/workspace/members</code>. Supplying an email to
+            <code className="text-stone-200"> POST</code> sends a Supabase Auth invite and links the returned user to the
+            current workspace role. Human dashboard authorization comes from <code className="text-stone-200">workspace_members</code>,
+            not Supabase <code className="text-stone-200">user_metadata</code>.
           </p>
         </section>
       </AurelGridSection>

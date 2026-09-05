@@ -372,6 +372,7 @@ function NumInput({
   prefix,
   suffix,
   width = "w-28",
+  disabled = false,
 }: {
   value: number;
   onChange: (v: number) => void;
@@ -381,6 +382,7 @@ function NumInput({
   prefix?: string;
   suffix?: string;
   width?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="inline-flex items-center bg-zinc-800 border border-zinc-700  overflow-hidden">
@@ -396,7 +398,8 @@ function NumInput({
         max={max}
         step={step}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={`bg-transparent px-3 py-2 text-sm text-white focus:outline-none ${width}`}
+        disabled={disabled}
+        className={`bg-transparent px-3 py-2 text-sm text-white focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${width}`}
       />
       {suffix && (
         <span className="px-2.5 text-zinc-500 text-xs border-l border-zinc-700 select-none">
@@ -413,12 +416,14 @@ function TextInput({
   placeholder,
   type = "text",
   className = "",
+  disabled = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <input
@@ -426,6 +431,7 @@ function TextInput({
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
       className={`bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors ${className}`}
     />
   );
@@ -436,16 +442,19 @@ function SelectInput<T extends string>({
   onChange,
   options,
   className = "",
+  disabled = false,
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string }[];
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
+      disabled={disabled}
       className={`bg-zinc-800 border border-zinc-700  px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-stone-400/20 focus:border-stone-300/60 transition-colors ${className}`}
     >
       {options.map((o) => (
@@ -740,10 +749,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen aurel-bg">
+    <div className="flex min-h-screen flex-col aurel-bg lg:flex-row">
       <Sidebar />
       
-      <main className="flex-1 ml-64">
+      <main className="flex-1 lg:ml-64">
         {/* ── Header ─────────────────────────────────────── */}
         <header className="border-b border-stone-800/60 bg-black/80 backdrop-blur-sm sticky top-0 z-40">
           <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -944,7 +953,7 @@ export default function SettingsPage() {
         >
           <SettingRow
             label="Workspace access"
-            description="Controls whether verification requests are accepted for this workspace"
+            description="Managed by billing provider events; shown here for visibility"
           >
             <SelectInput
               value={s.workspace_status}
@@ -956,42 +965,46 @@ export default function SettingsPage() {
                 { value: "suspended", label: "Suspended" },
               ]}
               className="w-36"
+              disabled
             />
           </SettingRow>
 
           <SettingRow
             label="Plan label"
-            description="Manual beta packaging label until a billing provider owns subscription state"
+            description="Managed by billing provider events; shown here for visibility"
           >
             <TextInput
               value={s.billing_plan}
               onChange={(v) => set("billing_plan", v)}
               placeholder="pilot"
               className="w-40"
+              disabled
             />
           </SettingRow>
 
           <SettingRow
             label="Monthly verification limit"
-            description="Hard cap for new verification requests in the current usage period; 0 means unlimited"
+            description="Managed by billing provider events; shown here for visibility"
           >
             <NumInput
               value={s.monthly_verification_limit}
               onChange={(v) => set("monthly_verification_limit", v)}
               min={0}
               suffix={s.monthly_verification_limit === 0 ? "unlimited" : "checks"}
+              disabled
             />
           </SettingRow>
 
           <SettingRow
             label="Usage period start"
-            description="Optional ISO timestamp for quota counting; blank defaults to the current UTC month"
+            description="Managed by billing provider events; shown here for visibility"
           >
             <TextInput
               value={s.limit_period_start}
               onChange={(v) => set("limit_period_start", v)}
               placeholder="2026-09-01T00:00:00.000Z"
               className="w-64"
+              disabled
             />
           </SettingRow>
 

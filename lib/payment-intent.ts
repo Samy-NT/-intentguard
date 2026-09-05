@@ -1,5 +1,12 @@
+import { createHash } from "node:crypto";
 import type { SignedMandate } from "@/lib/mandates";
 import type { PaymentIntent } from "@/types";
+import { canonicalizeAuditValue } from "@/lib/audit";
+
+/** Stable hash used to prevent an idempotency key being replayed for a new payload. */
+export function hashPaymentIntent(intent: Omit<PaymentIntent, "workspace_id"> | Record<string, unknown>): string {
+  return createHash("sha256").update(canonicalizeAuditValue(intent)).digest("hex");
+}
 
 export function getMissionScope(
   intent: Pick<PaymentIntent, "mission_scope" | "metadata"> & { mandate?: SignedMandate }

@@ -29,6 +29,25 @@ function mockSessionDb(active = true): SupabaseClient {
   } as unknown as SupabaseClient;
 }
 
+function mockMemberSessionDb(active = true): SupabaseClient {
+  const memberQuery = {
+    select: vi.fn(() => memberQuery),
+    eq: vi.fn(() => memberQuery),
+    maybeSingle: vi.fn(() =>
+      Promise.resolve({
+        data: active
+          ? { user_id: "user_1", workspace_id: "ws_1", is_active: true, role: "admin" }
+          : { user_id: "user_1", workspace_id: "ws_1", is_active: false, role: "admin" },
+        error: null,
+      })
+    ),
+  };
+
+  return {
+    from: vi.fn(() => memberQuery),
+  } as unknown as SupabaseClient;
+}
+
 function requestWithCookie(token: string): NextRequest {
   return {
     cookies: {
@@ -64,6 +83,21 @@ describe("dashboard session", () => {
     expect(header).toContain("HttpOnly");
     expect(header).toContain("SameSite=Lax");
     expect(header).toContain("Path=/");
+  });
+
+  it("does not fall back to shared secrets in production", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousIntentSecret = process.env.INTENTGUARD_SECRET;
+    delete process.env.DASHBOARD_SESSION_SECRET;
+    process.env.INTENTGUARD_SECRET = "shared-secret-that-must-not-sign-dashboard-cookies";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    try {
+      await expect(createDashboardSession({ workspace_id: "ws_1", api_key_id: "key_1", role: "operator" })).rejects.toThrow();
+    } finally {
+      (process.env as Record<string, string | undefined>).NODE_ENV = previousNodeEnv;
+      if (previousIntentSecret === undefined) delete process.env.INTENTGUARD_SECRET;
+      else process.env.INTENTGUARD_SECRET = previousIntentSecret;
+    }
   });
 
   it("validates a signed session against an active API key", async () => {
@@ -110,6 +144,31 @@ describe("dashboard session", () => {
       role: "operator",
       csrf_token: session.csrf_token,
     });
+  });
+
+  it("validates a signed session against an active Supabase Auth workspace member", async () => {
+    const session = await createDashboardSession({
+      workspace_id: "ws_1",
+      supabase_user_id: "user_1",
+      role: "admin",
+      now: new Date("2026-09-01T00:00:00.000Z"),
+    } as Parameters<typeof createDashboardSession>[0]);
+
+    const db = mockMemberSessionDb(true);
+    const result = await validateDashboardSession(
+      requestWithCookie(session.token),
+      db,
+      new Date("2026-09-01T01:00:00.000Z")
+    );
+
+    expect(result).toMatchObject({
+      valid: true,
+      workspace_id: "ws_1",
+      supabase_user_id: "user_1",
+      role: "admin",
+      csrf_token: session.csrf_token,
+    });
+    expect(db.from).toHaveBeenCalledWith("workspace_members");
   });
 
   it("rejects expired sessions and revoked backing keys", async () => {

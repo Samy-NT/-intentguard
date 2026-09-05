@@ -6,6 +6,12 @@ import { validateWebhookUrl } from "@/lib/webhooks/validate";
 
 const MASKED_SECRET = "********";
 const MAX_SETTINGS_BODY_BYTES = 64_000;
+const PROVIDER_MANAGED_POLICY_KEYS = [
+  "workspace_status",
+  "billing_plan",
+  "monthly_verification_limit",
+  "limit_period_start",
+] as const;
 
 function optionalStringOrNull(body: Record<string, unknown>, key: string): boolean {
   return !(key in body) || typeof body[key] === "string" || body[key] === null;
@@ -96,8 +102,21 @@ export async function PATCH(req: NextRequest) {
   const forbidden = requireRole(auth, "admin");
   if (forbidden) return forbidden;
 
-  // Separate webhook columns from the JSONB policy blob
+  // Separate webhook columns from the JSONB policy blob. Billing and
+  // entitlement fields are provider-managed and must never be writable from
+  // the dashboard settings surface.
   const policy = { ...parsed.data };
+  const { data: currentWorkspace, error: currentWorkspaceError } = await db
+    .from("workspaces")
+    .select("policy")
+    .eq("id", workspace_id)
+    .maybeSingle();
+  if (currentWorkspaceError || !currentWorkspace) {
+    return Response.json({ error: currentWorkspaceError?.message ?? "Workspace not found" }, { status: currentWorkspaceError ? 503 : 404 });
+  }
+  const currentPolicy = currentWorkspace.policy && typeof currentWorkspace.policy === "object" && !Array.isArray(currentWorkspace.policy)
+    ? currentWorkspace.policy as Record<string, unknown>
+    : {};
   const webhook_url = policy.webhook_url;
   const webhook_secret = policy.webhook_secret;
   const webhook_threshold = policy.webhook_threshold;
@@ -112,7 +131,11 @@ export async function PATCH(req: NextRequest) {
   delete policy.siem_secret;
   delete policy.siem_secret_configured;
   delete policy.semantic_fail_mode;
-  const normalizedPolicy = normalizeWorkspacePolicy(policy);
+  for (const key of PROVIDER_MANAGED_POLICY_KEYS) delete policy[key];
+  const normalizedPolicy = normalizeWorkspacePolicy({
+    ...currentPolicy,
+    ...policy,
+  });
   const update: Record<string, unknown> = { policy: normalizedPolicy };
 
   if (webhook_url !== undefined) {

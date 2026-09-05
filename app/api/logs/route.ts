@@ -1,9 +1,11 @@
 import { type NextRequest } from "next/server";
-import { authenticateRequest } from "@/lib/auth";
+import { authenticateRequest, requireRole } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const auth = await authenticateRequest(req);
   if (auth instanceof Response) return auth;
+  const forbidden = requireRole(auth, "operator");
+  if (forbidden) return forbidden;
   const { db, workspace_id } = auth;
   const url = new URL(req.url);
   const id = url.searchParams.get("id");

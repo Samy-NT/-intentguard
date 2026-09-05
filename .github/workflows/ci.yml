@@ -21,8 +21,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit runtime dependencies
+        run: npm run audit:runtime
+
       - name: Type check
         run: npm run type-check
+
+      - name: Verify Supabase migration history
+        run: npm run verify:supabase-migrations
 
       - name: Lint
         run: npm run lint
@@ -44,6 +50,7 @@ jobs:
           AUDIT_SIGNING_SECRET: test-audit-signing-secret
           MANDATE_SIGNING_SECRET: test-mandate-signing-secret
           CRON_SECRET: test-cron-secret
+          ALLOWED_ORIGINS: http://127.0.0.1:3000
 
       - name: Smoke production readiness routes
         run: |
@@ -62,6 +69,7 @@ jobs:
           AUDIT_SIGNING_SECRET: test-audit-signing-secret
           MANDATE_SIGNING_SECRET: test-mandate-signing-secret
           CRON_SECRET: test-cron-secret
+          ALLOWED_ORIGINS: http://127.0.0.1:3000
 
       - name: Package agent integrations
         run: |

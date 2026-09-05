@@ -99,6 +99,39 @@ describe("action API routes", () => {
     );
   });
 
+  it("persists and replays a signed action audit record when the audit table is available", async () => {
+    const rows: Record<string, unknown>[] = [];
+    const db = {
+      from: vi.fn((table: string) => {
+        if (table !== "action_audit_logs") throw new Error(`unexpected table ${table}`);
+        const builder = {
+          select: () => builder,
+          eq: () => builder,
+          maybeSingle: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
+          insert: (row: Record<string, unknown>) => {
+            rows.push({ id: "audit_1", ...row });
+            return Promise.resolve({ error: null });
+          },
+        };
+        return builder;
+      }),
+    };
+    const previousSecret = process.env.AUDIT_SIGNING_SECRET;
+    process.env.AUDIT_SIGNING_SECRET = "test-action-audit-signing-secret-0123456789";
+    mocks.authenticateRequest.mockResolvedValueOnce({ ...authenticated(), db } as never);
+    try {
+      const { POST } = await import("@/app/api/v1/actions/evaluate/route");
+      const response = await POST(request(actionBody()) as never);
+      const body = await response.json();
+      expect(response.status).toBe(200);
+      expect(body).toMatchObject({ auditSignatureVersion: "action-audit-v1-hmac-sha256" });
+      expect(rows).toHaveLength(1);
+    } finally {
+      if (previousSecret === undefined) delete process.env.AUDIT_SIGNING_SECRET;
+      else process.env.AUDIT_SIGNING_SECRET = previousSecret;
+    }
+  });
+
   it("accepts client idempotency keys on action evaluation", async () => {
     const { POST } = await import("@/app/api/v1/actions/evaluate/route");
 

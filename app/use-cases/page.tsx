@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Banknote, Bot, ClipboardCheck, Database, MessageSquare, ShoppingCart, ShieldCheck, Wrench } from "lucide-react";
 import { AurelGridSection, AurelPublicHeader, AurelPublicMain } from "@/app/components/AurelPublicShell";
+import { agentTypes } from "@/lib/capabilities";
 
 export const metadata: Metadata = {
   title: "Use Cases",
@@ -49,6 +52,9 @@ const useCases = [
   },
 ];
 
+const useCaseIcons = [Banknote, ShoppingCart, Database, Wrench, Bot, ClipboardCheck];
+const laneIcons = [MessageSquare, ShieldCheck, ClipboardCheck];
+
 const lanes = [
   ["Agent request", "The agent proposes an action with context, target, scope, and supporting trace."],
   ["Intent firewall", "Aurels checks policy, behavior, semantic alignment, provenance, and risk."],
@@ -73,6 +79,7 @@ export default function UseCasesPage() {
                 index < lanes.length - 1 ? "border-b border-stone-800 md:border-b-0 md:border-r" : ""
               }`}
             >
+              {(() => { const Icon = laneIcons[index]; return <Icon className="h-5 w-5 text-stone-300" aria-hidden />; })()}
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-700">
                 PASS {String(index + 1).padStart(2, "0")}
               </div>
@@ -97,15 +104,15 @@ export default function UseCasesPage() {
         </div>
 
         <div className="grid border border-stone-800 md:grid-cols-2 lg:grid-cols-3">
-          {useCases.map((item, index) => (
+          {useCases.map((item, index) => {
+            const Icon = useCaseIcons[index];
+            return (
             <article
               key={item.title}
               className="aurel-surface-line min-h-[260px] border-b border-stone-800 bg-black/55 p-6 md:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-last-child(-n+3)]:border-b-0"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-700">
-                  {String(index + 1).padStart(2, "0")} / {item.label}
-                </div>
+                <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center border border-stone-700 bg-stone-950 text-stone-300"><Icon className="h-4 w-4" aria-hidden /></div><div className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-700">{String(index + 1).padStart(2, "0")} / {item.label}</div></div>
                 <div className="border border-stone-800 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-stone-500">
                   {item.decision}
                 </div>
@@ -113,7 +120,8 @@ export default function UseCasesPage() {
               <h3 className="mt-9 text-xl font-black uppercase tracking-tight text-stone-100">{item.title}</h3>
               <p className="mt-4 leading-7 text-stone-400">{item.text}</p>
             </article>
-          ))}
+            );
+          })}
         </div>
       </AurelGridSection>
 
@@ -129,6 +137,26 @@ export default function UseCasesPage() {
             velocity, decision, and signed audit. The Aurels product position is broader:
             secure the intent before any autonomous action executes.
           </div>
+        </div>
+      </AurelGridSection>
+
+      <AurelGridSection>
+        <div className="mb-8 grid gap-5 lg:grid-cols-[0.7fr_1fr] lg:items-end">
+          <div>
+            <div className="aurel-kicker mb-3">Agent type lanes</div>
+            <h2 className="aurel-title text-3xl md:text-5xl">Same gate, different runtime.</h2>
+          </div>
+          <p className="max-w-xl text-sm leading-7 text-stone-400">Choose the runtime profile that matches your estate, then layer in the controls your action boundary needs.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {agentTypes.map((agent) => (
+            <Link key={agent.slug} href={`/use-cases/agent-type/${agent.slug}`} className="group border border-stone-800 bg-black/60 p-5 transition-colors hover:bg-stone-950">
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-stone-600">{agent.eyebrow}</div>
+              <h3 className="mt-7 text-lg font-black uppercase tracking-tight text-stone-100">{agent.name}</h3>
+              <p className="mt-3 text-sm leading-6 text-stone-400">{agent.summary}</p>
+              <div className="mt-5 text-xs font-bold uppercase tracking-[0.14em] text-stone-300 group-hover:text-white">Open lane →</div>
+            </Link>
+          ))}
         </div>
       </AurelGridSection>
     </AurelPublicMain>

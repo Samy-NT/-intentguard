@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 
 export const AUDIT_SIGNATURE_VERSION = "audit-v1-hmac-sha256";
+export const ACTION_AUDIT_SIGNATURE_VERSION = "action-audit-v1-hmac-sha256";
 
 export interface AuditDecisionRecord {
   workspace_id: string;
@@ -19,6 +20,22 @@ export interface AuditDecisionRecord {
 export function getAuditSigningSecret(): string {
   const [activeSecret] = getAuditVerificationSecrets();
   return activeSecret ?? "";
+}
+
+/** Minimal, non-sensitive record signed for generic agent/tool actions. */
+export interface ActionAuditDecisionRecord {
+  workspace_id: string;
+  action_id: string;
+  integration: string;
+  agent_id: string | null;
+  decision: string;
+  reason: string | null;
+  risk_score: number;
+  rule_ids: string[];
+  policy_version: string | null;
+  trace_id: string | null;
+  payload_hash: string;
+  evaluated_at: string;
 }
 
 export function getAuditVerificationSecrets(): string[] {
@@ -57,6 +74,26 @@ export function verifyAuditDecisionSignature(
   const normalizedSignature = signature.toLowerCase();
   const secrets = secret ? [secret] : getAuditVerificationSecrets();
   return secrets.some((candidate) => signAuditDecision(record, candidate) === normalizedSignature);
+}
+
+export function signActionAuditDecision(
+  record: ActionAuditDecisionRecord,
+  secret = getAuditSigningSecret()
+): string {
+  if (!secret) throw new Error("[audit] Missing audit signing secret");
+  return createHmac("sha256", secret)
+    .update(canonicalizeAuditValue({ version: ACTION_AUDIT_SIGNATURE_VERSION, record }))
+    .digest("hex");
+}
+
+export function verifyActionAuditDecisionSignature(
+  record: ActionAuditDecisionRecord,
+  signature: string,
+  secret?: string
+): boolean {
+  const normalizedSignature = signature.toLowerCase();
+  const secrets = secret ? [secret] : getAuditVerificationSecrets();
+  return secrets.some((candidate) => signActionAuditDecision(record, candidate) === normalizedSignature);
 }
 
 function sortForCanonicalJson(value: unknown): unknown {

@@ -47,7 +47,8 @@ export interface AuthResult {
 export interface AuthenticatedRequest {
   db: SupabaseClient;
   workspace_id: string;
-  api_key_id: string;
+  api_key_id?: string;
+  supabase_user_id?: string;
   role: ApiKeyRole;
 }
 
@@ -108,7 +109,13 @@ export async function authenticateRequest(
     if (isMutationMethod(req.method) && !validateCsrfHeader(req, session.csrf_token)) {
       return err("Missing or invalid CSRF token", 403);
     }
-    return { db, workspace_id: session.workspace_id, api_key_id: session.api_key_id, role: session.role };
+    return {
+      db,
+      workspace_id: session.workspace_id,
+      api_key_id: session.api_key_id,
+      supabase_user_id: session.supabase_user_id,
+      role: session.role,
+    };
   }
 
   let auth: AuthResult;

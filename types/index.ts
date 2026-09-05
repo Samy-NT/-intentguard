@@ -88,6 +88,7 @@ export interface DbRule {
 export interface DbVerifyLog {
   id: string;
   intent_id: string;
+  intent_payload_hash: string | null;
   workspace_id: string;
   agent_id: string;
   recipient: string;
@@ -104,4 +105,32 @@ export interface DbVerifyLog {
   audit_signature: string | null;
   audit_signature_version: string | null;
   created_at: string;
+}
+
+export interface DbActionAuditLog {
+  id: string;
+  workspace_id: string;
+  action_id: string;
+  integration: string;
+  agent_id: string | null;
+  decision: "allow" | "block" | "require_approval" | "rewrite" | "quarantine";
+  reason: string | null;
+  risk_score: number;
+  rule_ids: string[];
+  policy_version: string | null;
+  trace_id: string | null;
+  payload_hash: string;
+  audit_signature: string;
+  audit_signature_version: string;
+  created_at: string;
+}
+
+export interface DbWorkspaceMember {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: ApiKeyRole;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }

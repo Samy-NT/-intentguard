@@ -106,10 +106,10 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <div className="flex min-h-screen aurel-bg">
+    <div className="flex min-h-screen flex-col aurel-bg lg:flex-row">
       <Sidebar />
 
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 p-4 sm:p-8 lg:ml-64">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
@@ -162,12 +162,12 @@ export default function ApiKeysPage() {
                   <h3 className="font-semibold text-emerald-400 mb-1">API Key Created</h3>
                   <p className="text-sm text-stone-400 mb-2">Copy this key now. It will not be shown again.</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-zinc-900 px-3 py-2 rounded text-sm font-mono text-emerald-300 overflow-x-auto">
+                    <code className="flex-1 bg-zinc-900 px-3 py-2 text-sm font-mono text-emerald-300 overflow-x-auto">
                       {createdKey}
                     </code>
                     <button
                       onClick={() => navigator.clipboard.writeText(createdKey)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded text-sm transition-colors"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm transition-colors"
                     >
                       Copy
                     </button>
@@ -213,7 +213,7 @@ export default function ApiKeysPage() {
                         <div className="text-xs text-zinc-600 font-mono mt-1">{key.id}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium border ${roleColors[key.role]}`}>
+                        <span className={`px-2 py-1 text-xs font-medium border ${roleColors[key.role]}`}>
                           {key.role}
                         </span>
                       </td>

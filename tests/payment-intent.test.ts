@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMissionScope } from "@/lib/payment-intent";
+import { getMissionScope, hashPaymentIntent } from "@/lib/payment-intent";
 
 describe("getMissionScope", () => {
   it("prefers the top-level mission_scope field", () => {
@@ -34,5 +34,17 @@ describe("getMissionScope", () => {
 
   it("ignores empty or non-string values", () => {
     expect(getMissionScope({ mission_scope: " ", metadata: { mission_scope: 42 } })).toBeUndefined();
+  });
+});
+
+describe("hashPaymentIntent", () => {
+  it("is stable for equivalent key orderings", () => {
+    expect(hashPaymentIntent({ intent_id: "pay_1", amount: 10, currency: "USD" }))
+      .toBe(hashPaymentIntent({ currency: "USD", amount: 10, intent_id: "pay_1" }));
+  });
+
+  it("changes when security-relevant payload fields change", () => {
+    const base = { intent_id: "pay_1", amount: 10, currency: "USD", recipient: "vendor@example.com" };
+    expect(hashPaymentIntent(base)).not.toBe(hashPaymentIntent({ ...base, recipient: "attacker@example.com" }));
   });
 });

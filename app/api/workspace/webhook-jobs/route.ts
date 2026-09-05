@@ -9,6 +9,8 @@ const RetryJobSchema = z.object({
 export async function GET(req: NextRequest) {
   const auth = await authenticateRequest(req);
   if (auth instanceof Response) return auth;
+  const forbidden = requireRole(auth, "operator");
+  if (forbidden) return forbidden;
   const { db, workspace_id } = auth;
 
   const { data, error } = await db

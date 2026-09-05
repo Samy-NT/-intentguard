@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  // Keep static page generation deterministic on constrained Windows/OneDrive
+  // workspaces; CI/Linux can still override this if parallelism is desired.
+  experimental: {
+    cpus: 1,
+  },
   async headers() {
     return [
       {
