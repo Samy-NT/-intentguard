@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
-import { Activity, BookOpen, Code2, FileCheck2, Mail, Moon, Shield, ShieldCheck, SunMedium } from "lucide-react";
+import { Activity, ArrowRight, BookOpen, Code2, FileCheck2, ListChecks, Mail, Moon, Shield, ShieldCheck, SlidersHorizontal, SunMedium } from "lucide-react";
 import { HeroSceneFallback } from "@/app/components/hero/HeroSceneFallback";
 import type {
   RulesLayerResult,
@@ -961,6 +961,7 @@ function PipelineColHeader({
 
 export default function HomePage() {
   const [theme, setTheme] = useState<ThemeMode>("light");
+  const [demoMode, setDemoMode] = useState<"simple" | "detailed">("simple");
   // ── Console state ────────────────────────────────────────────────────────────
   const [agentId, setAgentId] = useState<string>(SCENARIOS.legitimate.agentId);
   const [amount, setAmount] = useState<number>(200);
@@ -1286,11 +1287,127 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className={`inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] ${demoMetaTone}`}>
+              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+              Choose your view
+            </div>
+            <div className={`inline-flex border ${isLight ? "border-stone-300 bg-white/80" : "border-zinc-700 bg-zinc-950/80"} p-1`} role="tablist" aria-label="Demo detail level">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={demoMode === "simple"}
+                onClick={() => setDemoMode("simple")}
+                className={`inline-flex items-center gap-2 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors ${demoMode === "simple" ? "bg-stone-100 text-black" : "text-stone-500 hover:text-stone-200"}`}
+              >
+                <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                Simple
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={demoMode === "detailed"}
+                onClick={() => setDemoMode("detailed")}
+                className={`inline-flex items-center gap-2 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors ${demoMode === "detailed" ? "bg-stone-100 text-black" : "text-stone-500 hover:text-stone-200"}`}
+              >
+                <Code2 className="h-3.5 w-3.5" aria-hidden />
+                Detailed
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Console block — full width */}
         <div className="aurel-surface-line mx-auto max-w-7xl overflow-hidden border border-stone-200/70 shadow-[0_30px_100px_rgba(28,25,23,0.12)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_36px_120px_rgba(28,25,23,0.16)]" style={consoleShellStyle}>
-          {/* Desktop 3-column */}
+          {demoMode === "simple" && (
+            <div className="grid gap-5 p-5 md:grid-cols-3 md:gap-6 md:p-7">
+              <div className="flex min-h-[300px] flex-col border border-zinc-800 p-5" style={panelStyle("#0a0a0a", "#ffffff")}>
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-stone-500">01 / Intent</div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Describe the action</h3>
+                  </div>
+                  <div className="flex h-8 w-8 items-center justify-center border border-stone-700 font-mono text-xs text-stone-400">01</div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <FieldLabel htmlFor="simple-agent-id">Agent</FieldLabel>
+                    <MonoInput id="simple-agent-id" value={agentId} onChange={(v) => { setAgentId(v); setActiveScenario(null); }} placeholder="ag_expense_manager_v2" />
+                  </div>
+                  <div className="grid grid-cols-[1fr_80px] gap-2">
+                    <div>
+                      <FieldLabel htmlFor="simple-amount">Amount</FieldLabel>
+                      <MonoInput id="simple-amount" type="number" value={amount} onChange={(v) => setAmount(Number(v))} placeholder="0" />
+                    </div>
+                    <div>
+                      <FieldLabel htmlFor="simple-currency">Currency</FieldLabel>
+                      <select id="simple-currency" value={currency} onChange={(e) => setCurrency(e.target.value)} className={`w-full border border-zinc-800 px-2 py-2 text-xs font-mono focus:outline-none focus:border-stone-400/60 ${isLight ? "bg-white text-stone-900" : "bg-zinc-900 text-[#e2e8f0]"}`}>
+                        {["USD", "EUR", "GBP", "ETH", "USDC", "USDT", "BTC"].map((c) => <option key={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <FieldLabel htmlFor="simple-recipient">Recipient</FieldLabel>
+                    <MonoInput id="simple-recipient" value={recipient} onChange={setRecipient} placeholder="billing@vendor.com" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex min-h-[300px] flex-col border border-zinc-800 p-5" style={panelStyle("#090909", "#fbfaf8")}>
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-stone-500">02 / Analysis</div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Run the gate</h3>
+                  </div>
+                  <div className="flex h-8 w-8 items-center justify-center border border-stone-700 font-mono text-xs text-stone-400">02</div>
+                </div>
+                <div className="flex flex-1 flex-col justify-between gap-5">
+                  <div className="space-y-2 font-mono text-[10px] uppercase tracking-[0.12em]">
+                    {[
+                      ["Policy checks", showLayer1 ? layer1DotStatus() : "idle"],
+                      ["Behavior pressure", showLayer2 ? layer2DotStatus() : "idle"],
+                      ["Semantic intent", showLayer3 ? "pass" : "idle"],
+                    ].map(([label, status]) => (
+                      <div key={label} className={`flex items-center justify-between border-b border-zinc-800/70 pb-2 ${demoMetaTone}`}>
+                        <span>{label}</span>
+                        <ConsoleDot status={status as "idle" | "running" | "pass" | "triggered"} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className={`flex items-center gap-3 border p-3 text-xs leading-relaxed ${isLight ? "border-stone-200 bg-stone-50 text-stone-600" : "border-zinc-800 bg-black/30 text-stone-400"}`}>
+                    <ArrowRight className="h-4 w-4 flex-shrink-0 text-stone-400" aria-hidden />
+                    <span>{isRunning ? "Evaluating the action across three defense layers…" : "Aurel checks policy, behavior, and intent before execution."}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex min-h-[300px] flex-col border border-zinc-800 p-5" style={panelStyle("#0a0a0a", "#ffffff")}>
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-stone-500">03 / Decision</div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Enforce the verdict</h3>
+                  </div>
+                  <div className="flex h-8 w-8 items-center justify-center border border-stone-700 font-mono text-xs text-stone-400">03</div>
+                </div>
+                <div className="flex flex-1 flex-col justify-between gap-5">
+                  <div>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-stone-600">Current result</div>
+                    <div className={`border p-4 ${!result ? "border-zinc-800 text-stone-500" : result.decision === "allow" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" : result.decision === "block" ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-amber-500/40 bg-amber-500/10 text-amber-400"}`}>
+                      <div className="font-mono text-lg font-bold uppercase tracking-[0.15em]">{isRunning ? "Checking…" : result ? result.decision : "Ready"}</div>
+                      {result && <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] opacity-80">Risk score {result.risk_score}/100</div>}
+                    </div>
+                  </div>
+                  {consoleError && <div className="border border-red-900/60 bg-red-950/20 px-3 py-2 font-mono text-[10px] tracking-wide text-red-500">ERR: {consoleError}</div>}
+                  <button type="button" onClick={handleSubmit} disabled={isRunning} className="w-full bg-stone-100 py-3 text-[11px] font-mono font-bold uppercase tracking-[0.15em] text-black transition-colors hover:bg-white disabled:bg-zinc-900 disabled:text-zinc-700">
+                    {isRunning ? "Verifying…" : "Submit verification"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Desktop 3-column detailed view */}
+          {demoMode === "detailed" && (
           <div
             className="hidden h-[720px] lg:grid"
             style={{ gridTemplateColumns: "30% 40% 30%" }}
@@ -1575,9 +1692,10 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Mobile notice */}
-          <div className="px-6 py-14 text-center lg:hidden">
+          {demoMode === "detailed" && <div className="px-6 py-14 text-center lg:hidden">
             <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-stone-600">
               Desktop required
             </div>
@@ -1590,7 +1708,7 @@ export default function HomePage() {
             >
               Request API access instead →
             </a>
-          </div>
+          </div>}
         </div>
       </section>
 
