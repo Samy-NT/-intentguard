@@ -17,6 +17,10 @@ export type AgentType = {
   summary: string;
   coverage: string[];
   firstStep: string;
+  audience: string;
+  actionExamples: string[];
+  riskPatterns: string[];
+  rollout: { step: string; title: string; text: string }[];
 };
 
 export const capabilities: Capability[] = [
@@ -107,6 +111,14 @@ export const agentTypes: AgentType[] = [
     summary: "Protect agents embedded in the SaaS platforms your teams already use, without losing ownership or policy context.",
     coverage: ["Inventory agents and owners across business platforms", "Apply environment-aware posture and permission checks", "Gate sensitive actions with identity, boundary, and audit context"],
     firstStep: "Connect a SaaS workspace and establish the first approved agent baseline.",
+    audience: "Security, IT, and platform teams governing agents inside business SaaS.",
+    actionExamples: ["Approve or reject an invoice payment", "Change a CRM account or entitlement", "Send a customer message or export a report"],
+    riskPatterns: ["A connector inherits a broader permission set than the agent needs", "A production workflow executes outside its approved business hours", "An instruction hidden in a record redirects the agent to a new recipient"],
+    rollout: [
+      { step: "01", title: "Inventory", text: "Map workspaces, owners, agents, connectors, and the data each workflow can reach." },
+      { step: "02", title: "Set the lane", text: "Define allowed tools, targets, spend caps, approval thresholds, and escalation routes." },
+      { step: "03", title: "Enforce", text: "Place the verification call immediately before the SaaS side effect and retain signed evidence." },
+    ],
   },
   {
     slug: "coding-personal-agents",
@@ -115,6 +127,14 @@ export const agentTypes: AgentType[] = [
     summary: "Bring local coding assistants, desktop agents, and personal MCP servers into the same intent and tool-security model.",
     coverage: ["Register local agents and MCP servers", "Constrain file, shell, repository, and deployment tools", "Capture provenance and runtime traces without blocking safe iteration"],
     firstStep: "Install the Aurels plugin and wrap the first high-consequence local tool.",
+    audience: "Developers and security-minded teams using coding assistants, desktop agents, or local MCP servers.",
+    actionExamples: ["Write or delete files in a repository", "Run a migration, shell command, or package publish", "Open a pull request or deploy to production"],
+    riskPatterns: ["A tool call targets secrets, production files, or an untrusted repository", "Prompt injection turns a read task into a destructive shell command", "A local agent publishes or deploys without an approval boundary"],
+    rollout: [
+      { step: "01", title: "Install", text: "Add the plugin or SDK wrapper to the local runtime without changing the agent's normal workflow." },
+      { step: "02", title: "Constrain", text: "Block sensitive paths and commands, require approval for deploys, and record tool provenance." },
+      { step: "03", title: "Review", text: "Use traces and signed decisions to tune safe automation instead of relying on broad allowlists." },
+    ],
   },
   {
     slug: "cloud-and-homegrown",
@@ -123,6 +143,14 @@ export const agentTypes: AgentType[] = [
     summary: "Extend the same controls to agents built on cloud platforms, internal frameworks, and bespoke orchestration layers.",
     coverage: ["Use API and SDK adapters at the execution boundary", "Unify policy, identity, posture, and telemetry across clouds", "Export signed decisions to audit, SIEM, and operational workflows"],
     firstStep: "Add an Aurels verification call immediately before the first external side effect.",
+    audience: "Platform engineers building custom agents across cloud services, internal APIs, and orchestration frameworks.",
+    actionExamples: ["Provision or modify cloud infrastructure", "Move data between internal and external systems", "Trigger a multi-step workflow with financial or operational impact"],
+    riskPatterns: ["A custom agent bypasses the shared policy layer through a new adapter", "A service identity can reach multiple tenants or environments", "Retries duplicate an external side effect after a timeout"],
+    rollout: [
+      { step: "01", title: "Instrument", text: "Send the proposed action, identity, mission scope, and trace to the versioned verification API." },
+      { step: "02", title: "Unify", text: "Reuse one policy model across clouds, frameworks, queues, and human approval surfaces." },
+      { step: "03", title: "Operate", text: "Stream signed decisions and bounded telemetry to your SIEM, audit store, and incident workflows." },
+    ],
   },
 ];
 
